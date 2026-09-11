@@ -13,7 +13,8 @@
     "smoke": "node dist/scripts/smoke.js",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
     "security": "npm audit --omit=dev && node scripts/scan-sensitive.mjs",
-    "check": "npm test && npm run build && npm run security"
+    "check": "npm test && npm run build && npm run security",
+    "docs": "npm run build && node dist/scripts/gen-docs.js"
   },
   "engines": {
     "node": ">=22"

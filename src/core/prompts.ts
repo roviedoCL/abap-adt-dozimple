@@ -2,6 +2,28 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Config } from "./config.js";
 
+/** Metadatos de los flujos: los usan el registro y la documentación generada. */
+export const PROMPT_META = {
+  revisar_pase: {
+    title: "Revisar una orden antes del pase",
+    description: "Revisión completa de una orden: código, compañeros ausentes, bloqueos y, con el módulo de riesgo, su análisis.",
+    args: ["system", "transport"],
+    chain: "transport_contents → transport_diff → inactive_objects → co_change + edit_preflight → analyze_transport_risk (si hay módulo) → informe en tres capas: negocio, consultor, Basis",
+  },
+  remediar_atc: {
+    title: "Remediar hallazgos ATC de un objeto",
+    description: "ATC → documentación y nota SAP → sucesor liberado → corrección → sintaxis → guardado con orden.",
+    args: ["system", "object_name", "object_type?", "transport?"],
+    chain: "edit_preflight → run_atc (BEFORE) → explain + api_release_state + where_used/object_versions → clasificación CAMBIAR/INVESTIGAR/NO_CAMBIAR → atc_quickfix → syntax_check → write_source con la orden (con OK humano) → run_atc (AFTER) y reducción de P1",
+  },
+  diagnosticar_ticket: {
+    title: "Diagnosticar un incidente",
+    description: "Dumps, jobs, log de aplicación y errores de Gateway alrededor de un incidente.",
+    args: ["system", "hint", "date?"],
+    chain: "dumps → jobs → application_log → gateway_errors → transaction_info / get_source / object_versions / transport_contents → causa probable con evidencia y lo que no se pudo comprobar",
+  },
+} as const;
+
 /**
  * Flujos guiados (prompts MCP): aparecen como comandos en el cliente
  * (/mcp__abap-adt-doZimple__revisar_pase en Claude Code). Encadenan tools con
@@ -15,8 +37,8 @@ export function registerPrompts(server: McpServer, config: Config): string[] {
   server.registerPrompt(
     "revisar_pase",
     {
-      title: "Revisar una orden antes del pase",
-      description: "Revisión completa de una orden: código, compañeros ausentes, bloqueos y, con el módulo de riesgo, su análisis.",
+      title: PROMPT_META.revisar_pase.title,
+      description: PROMPT_META.revisar_pase.description,
       argsSchema: { system: sys, transport: z.string().describe("Orden, p. ej. DEVK900123") },
     },
     ({ system, transport }) =>
@@ -38,8 +60,8 @@ export function registerPrompts(server: McpServer, config: Config): string[] {
   server.registerPrompt(
     "remediar_atc",
     {
-      title: "Remediar hallazgos ATC de un objeto",
-      description: "ATC → documentación y nota SAP → sucesor liberado → corrección → sintaxis → guardado con orden.",
+      title: PROMPT_META.remediar_atc.title,
+      description: PROMPT_META.remediar_atc.description,
       argsSchema: {
         system: sys,
         object_name: z.string(),
@@ -69,8 +91,8 @@ export function registerPrompts(server: McpServer, config: Config): string[] {
   server.registerPrompt(
     "diagnosticar_ticket",
     {
-      title: "Diagnosticar un incidente",
-      description: "Dumps, jobs, log de aplicación y errores de Gateway alrededor de un incidente.",
+      title: PROMPT_META.diagnosticar_ticket.title,
+      description: PROMPT_META.diagnosticar_ticket.description,
       argsSchema: {
         system: sys,
         hint: z.string().describe("Qué falló: programa, transacción, job, usuario, servicio OData o nº de documento"),
