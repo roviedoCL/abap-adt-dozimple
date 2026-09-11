@@ -1,0 +1,43 @@
+{
+  "name": "abap-adt-dozimple",
+  "version": "0.2.0",
+  "description": "MCP de DoZimple para SAP ABAP: multi-sistema, seguro por diseño, revisión de código, ATC, diagnóstico y documentación",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "abap-adt-dozimple": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "smoke": "node dist/scripts/smoke.js",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "security": "npm audit --omit=dev && node scripts/scan-sensitive.mjs",
+    "check": "npm test && npm run build && npm run security"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "abap-adt-api": "8.4.3",
+    "axios": "1.20.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "DoZimple (https://dozimple.cl)",
+  "homepage": "https://dozimple.cl",
+  "keywords": [
+    "sap",
+    "abap",
+    "adt",
+    "mcp",
+    "model-context-protocol",
+    "dozimple"
+  ]
+}

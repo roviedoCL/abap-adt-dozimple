@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.env
+.env.*
+config/systems.json
+*.pem
+*.key
+*.p12
+*.pfx
+.DS_Store

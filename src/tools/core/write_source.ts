@@ -1,0 +1,60 @@
+import { z } from "zod";
+import { activateObject } from "../../core/activation.js";
+import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
+import { CLASS_INCLUDES, resolveObject, sourceUrl, TYPE_HELP } from "../../core/objects.js";
+import { assertTrkorr } from "../../core/policy.js";
+import { decideTransport, orderHeaders } from "../../core/transport.js";
+import { defineTool } from "../../core/tool.js";
+
+export default defineTool({
+  name: "write_source",
+  title: "Guardar fuente en SAP",
+  description:
+    "Sustituye la fuente COMPLETA de un objeto existente (o de un include de clase), en la orden indicada. " +
+    "Antes comprueba la sintaxis del código nuevo y, si hay errores, no escribe nada. Si el objeto está bloqueado en " +
+    "otra orden, se para y lo explica en vez de guardar donde SAP quiera. Luego activa (activate=false para no hacerlo). " +
+    "Para clases, escribe la clase entera en una sola llamada. Llama antes a edit_preflight.",
+  access: "write",
+  input: {
+    object_name: z.string().min(1),
+    object_type: z.string().optional().describe(TYPE_HELP),
+    include: z.enum(CLASS_INCLUDES).default("main"),
+    source: z.string().min(1).describe("Fuente completa nueva"),
+    transport: z.string().optional().describe("Orden (o tarea) donde debe ir el cambio. Obligatoria salvo objetos locales"),
+    activate: z.boolean().default(true),
+    skip_syntax_check: z.boolean().default(false),
+  },
+  async run({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap }) {
+    const requested = transport ? assertTrkorr(transport) : undefined;
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    const url = await sourceUrl(c, obj, include);
+
+    if (!skip_syntax_check) {
+      const msgs = await syntaxCheck(c, obj, url, source);
+      if (msgs.some(isError)) {
+        return { text: `No se escribió nada: el código nuevo tiene errores de sintaxis.\n\n${renderSyntax(msgs)}`, isError: true };
+      }
+    }
+
+    const saved = await sap.stateful(async (s) => {
+      const lock = await s.lock(obj.uri);
+      try {
+        const parent = lock.CORRNR ? (await orderHeaders(sap, [lock.CORRNR])).get(lock.CORRNR)?.parent : undefined;
+        const d = decideTransport(lock, requested, parent);
+        if (!d.ok) return d;
+        await s.setObjectSource(url, source, lock.LOCK_HANDLE, d.corrNr || undefined);
+        return d;
+      } finally {
+        await s.unLock(obj.uri, lock.LOCK_HANDLE).catch(() => undefined);
+      }
+    });
+
+    if (!saved.ok) return { text: saved.reason, isError: true };
+    let text = `${obj.name}${include !== "main" ? ` (${include})` : ""} guardado. ${saved.note}`;
+    if (!activate) return `${text}\nSin activar (activate=false): queda como versión inactiva.`;
+    const act = await activateObject(c, obj);
+    text += `\n\n${act.text}`;
+    return { text, isError: !act.ok };
+  },
+});
