@@ -2,6 +2,8 @@
 
 # abap-adt-doZimple
 
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1)
+
 **IA que trabaja en tu SAP con las reglas de un consultor senior.**
 
 Servidor [MCP](https://modelcontextprotocol.io) de **[DoZimple](https://dozimple.cl)** que da a los agentes de IA —
