@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { defaultVariant, recallRun, rememberRun, runAtc } from "../../core/atc.js";
-import { ToolError } from "../../core/errors.js";
+import { normalizeError, ToolError } from "../../core/errors.js";
+import { sourceObjectsOf } from "../../core/revisions.js";
 import { budget } from "../../core/output.js";
-import { resolveObject, TYPE_HELP } from "../../core/objects.js";
+import { resolveByTypePrefix, resolveObject, sqlLiteral, TYPE_HELP } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { defineTool } from "../../core/tool.js";
 
@@ -60,7 +61,28 @@ export default defineTool({
     }
 
     const variant = a.variant ?? (await defaultVariant(c));
-    const res = await runAtc(c, uri, variant, a.max_findings, a.include_exempted);
+    let res;
+    try {
+      res = await runAtc(c, uri, variant, a.max_findings, a.include_exempted);
+    } catch (e) {
+      // NW 7.50 no acepta una orden como conjunto ATC («No URI-Mapping defined for URI»):
+      // se ejecuta sobre los objetos de la orden, en una sola corrida.
+      const te = normalizeError(e);
+      if (!a.transport || te.kind !== "SAP" || !/URI-Mapping|500/i.test(te.message)) throw te;
+      const tr = assertTrkorr(a.transport);
+      const tasks = await sap.query(`SELECT trkorr FROM e070 WHERE strkorr = ${sqlLiteral(tr)}`, 500);
+      const ids = [tr, ...tasks.values.map((v) => v.TRKORR as string)];
+      const rows = await sap.query(`SELECT pgmid, object, obj_name FROM e071 WHERE trkorr IN ( ${ids.map(sqlLiteral).join(", ")} )`, 5000);
+      const { source, ddic } = sourceObjectsOf(rows.values as any);
+      const refs = [
+        ...source.map((s) => ({ name: s.name, types: s.types })),
+        ...ddic.map((d) => ({ name: d.split(" ").slice(1).join(" "), types: [d.split(" ")[0].slice(0, 4) + "/"] })),
+      ];
+      const uris = (await Promise.all(refs.map((r) => resolveByTypePrefix(c, r.name, r.types)))).filter(Boolean).map((r) => r!.uri);
+      if (!uris.length) throw new ToolError("NOT_FOUND", `La orden ${tr} no contiene objetos que el ATC pueda revisar.`);
+      res = await runAtc(c, uris, variant, a.max_findings, a.include_exempted);
+      scope = `orden ${tr} (sus ${uris.length} objetos: este release no admite la orden como conjunto ATC)`;
+    }
     rememberRun(system.id, res);
 
     const shown = res.findings.filter((f) => !a.priorities || a.priorities.includes(f.priority));

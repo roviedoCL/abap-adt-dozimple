@@ -2,19 +2,13 @@ import { z } from "zod";
 import type { ADTClient, Revision } from "abap-adt-api";
 import { diffLines, unified } from "../../core/diff.js";
 import { normalizeError, ToolError } from "../../core/errors.js";
-import { sqlLiteral } from "../../core/objects.js";
+import { resolveByTypePrefix, sqlLiteral } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { selectRevisionPair, sourceObjectsOf, versionNumber, type SourceObjectRef } from "../../core/revisions.js";
 import { describeOrder, orderHeaders } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 
-async function resolveRef(c: ADTClient, ref: SourceObjectRef) {
-  const hits = await c.searchObject(ref.name, undefined, 50);
-  const h = hits.find(
-    (x) => x["adtcore:name"].toUpperCase() === ref.name.toUpperCase() && ref.types.some((t) => x["adtcore:type"].startsWith(t)),
-  );
-  return h ? { uri: h["adtcore:uri"], type: h["adtcore:type"] } : undefined;
-}
+const resolveRef = (c: ADTClient, ref: SourceObjectRef) => resolveByTypePrefix(c, ref.name, ref.types);
 
 const label = (r?: Revision) =>
   r ? `${r.version || "sin orden"} (v${versionNumber(r) || "?"}, ${r.date.slice(0, 10)}, ${r.author})` : "—";
