@@ -36,7 +36,13 @@ const results: Array<{ tool: string; ms: number; ok: boolean; line: string }> = 
 async function call(tool: string, args: Record<string, unknown>, local = false) {
   if (!tools.some((t) => t.name === tool)) return results.push({ tool, ms: 0, ok: false, line: "no publicada en esta configuración" });
   const t0 = Date.now();
-  const r = (await client.callTool({ name: tool, arguments: local ? args : { system, ...args } })) as any;
+  let r: any;
+  try {
+    r = await client.callTool({ name: tool, arguments: local ? args : { system, ...args } }, undefined, { timeout: 180_000 });
+  } catch (e) {
+    // Una llamada lenta o fallida no aborta la batería: se anota y se sigue.
+    return results.push({ tool, ms: Date.now() - t0, ok: false, line: `sin respuesta: ${(e as Error).message}` });
+  }
   const text: string = r.content?.[0]?.text ?? "";
   const first = text.split("\n").find((l) => l.trim() && !l.startsWith("Sistema:") && !l.startsWith("Contenido de documentación")) ?? "";
   results.push({ tool, ms: Date.now() - t0, ok: !r.isError, line: first.slice(0, 110) });
@@ -48,7 +54,7 @@ await call("get_source", { object_name: "RSPARAM", object_type: "PROG", line_cou
 await call("get_source", { object_name: "RFC_READ_TABLE", object_type: "FUNC", line_count: 5 });
 await call("sql_query", { query: "SELECT mandt, mtext FROM t000", max_rows: 5 });
 await call("table_contents", { table: "T000", columns: ["MANDT", "MTEXT"] });
-await call("where_used", { object_name: "T000", object_type: "TABL", max_results: 3 });
+await call("where_used", { object_name: "RSPARAM", object_type: "PROG", max_results: 3 });
 await call("package_contents", { package: "SEUA_TRAN", max_objects: 10 });
 await call("ddic_type_info", { name: "MANDT" });
 await call("transaction_info", { tcode: "SE38" });

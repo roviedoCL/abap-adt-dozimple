@@ -92,9 +92,10 @@ export default defineTool({
       verdict.push(`BLOQUEADO en ${ids.join(", ")}: cualquier cambio irá obligatoriamente ahí.`);
       if (wanted && !ids.includes(wanted)) verdict.push(`No podrás guardar en ${wanted}.`);
     } else if (!isLocal) {
-      const cands = (info?.TRANSPORTS ?? []).map((x) => `${x.TRKORR} «${x.AS4TEXT}» (${x.AS4USER})`);
+      const all = info?.TRANSPORTS ?? [];
+      const cands = all.slice(0, 10).map((x) => `${x.TRKORR} «${x.AS4TEXT}» (${x.AS4USER})`);
       verdict.push("Sin bloqueo del CTS: puedes elegir la orden.");
-      if (cands.length) verdict.push(`Órdenes abiertas que ofrece el CTS: ${cands.join("; ")}`);
+      if (cands.length) verdict.push(`Órdenes abiertas que ofrece el CTS (${all.length}${all.length > 10 ? ", se muestran 10" : ""}): ${cands.join("; ")}`);
       if (wanted) {
         const w = (await orderHeaders(sap, [wanted])).get(wanted);
         if (!w) verdict.push(`${wanted} no existe en este sistema.`);

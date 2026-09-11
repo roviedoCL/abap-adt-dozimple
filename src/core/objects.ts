@@ -109,6 +109,13 @@ export async function sourceUrl(c: ADTClient, obj: ResolvedObject, include: Clas
   }
 }
 
+/** Localiza por nombre exacto aceptando varios prefijos de tipo (p. ej. PROG/ = programa o include). */
+export async function resolveByTypePrefix(c: ADTClient, name: string, prefixes: string[]): Promise<{ uri: string; type: string } | undefined> {
+  const hits = await c.searchObject(name, undefined, 50);
+  const h = hits.find((x) => x["adtcore:name"].toUpperCase() === name.toUpperCase() && prefixes.some((t) => x["adtcore:type"].startsWith(t)));
+  return h ? { uri: h["adtcore:uri"], type: h["adtcore:type"] } : undefined;
+}
+
 /** Escapa un literal para ABAP SQL. */
 export function sqlLiteral(v: string): string {
   return `'${v.replace(/'/g, "''")}'`;
