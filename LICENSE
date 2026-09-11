@@ -1,0 +1,15 @@
+Copyright (c) 2026 DoZimple — https://dozimple.cl
+Todos los derechos reservados.
+
+Este software y su documentación son propiedad de DoZimple. No se concede ninguna
+licencia de uso, copia, modificación, distribución ni explotación comercial salvo
+autorización expresa y por escrito de DoZimple.
+
+El módulo «DoZimple Transport Risk» (carpeta src/tools/transport-risk) es el cliente
+de un componente SAP propietario de DoZimple que no se distribuye en este repositorio.
+Para implantarlo: https://dozimple.cl
+
+Este software incluye componentes de terceros bajo sus propias licencias; ver
+THIRD_PARTY_NOTICES.md. Dichas licencias rigen sobre esos componentes.
+
+EL SOFTWARE SE PROPORCIONA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO.

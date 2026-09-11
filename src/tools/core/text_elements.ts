@@ -1,0 +1,79 @@
+import { z } from "zod";
+import { textElementsUrl, type TextElement } from "abap-adt-api";
+import { ToolError } from "../../core/errors.js";
+import { resolveObject, TYPE_HELP } from "../../core/objects.js";
+import { assertTrkorr } from "../../core/policy.js";
+import { decideTransport, orderHeaders } from "../../core/transport.js";
+import { defineTool } from "../../core/tool.js";
+
+const CATEGORIES = ["symbols", "selections", "headings"] as const;
+
+const read = defineTool({
+  name: "text_elements",
+  title: "Símbolos de texto y textos de selección",
+  description:
+    "Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de un programa, clase o grupo de funciones.",
+  access: "read",
+  requires: { adt: ["/sap/bc/adt/textelements"] },
+  input: {
+    object_name: z.string().min(1),
+    object_type: z.string().optional().describe(TYPE_HELP),
+    category: z.enum(CATEGORIES).default("symbols"),
+  },
+  async run({ object_name, object_type, category }, { sap }) {
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    const r = await c.getTextElements(textElementsUrl(obj.type, obj.name), category);
+    if (!r.textElements.length) return `${obj.name}: no tiene ${category}.`;
+    return `${obj.name} · ${category} (${r.textElements.length})\n` + r.textElements.map((t) => `  ${t.id}  ${t.text}${t.maxLength ? `  [máx ${t.maxLength}]` : ""}`).join("\n");
+  },
+});
+
+const write = defineTool({
+  name: "write_text_elements",
+  title: "Crear o cambiar símbolos de texto",
+  description:
+    "Añade o modifica símbolos de texto (o textos de selección) de un programa/clase/grupo, fusionando con los " +
+    "existentes: no borra los que no se mencionan. Completa la corrección «Create text in text pool» de atc_quickfix. " +
+    "Misma regla de orden que write_source.",
+  access: "write",
+  requires: { adt: ["/sap/bc/adt/textelements"] },
+  input: {
+    object_name: z.string().min(1),
+    object_type: z.string().optional().describe(TYPE_HELP),
+    category: z.enum(CATEGORIES).default("symbols"),
+    elements: z.array(z.object({ id: z.string().min(1).max(8), text: z.string(), max_length: z.number().int().min(1).max(255).optional() })).min(1),
+    transport: z.string().optional(),
+  },
+  async run({ object_name, object_type, category, elements, transport }, { sap }) {
+    const requested = transport ? assertTrkorr(transport) : undefined;
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    const url = textElementsUrl(obj.type, obj.name);
+    const current = (await c.getTextElements(url, category)).textElements;
+    const merged = new Map<string, TextElement>(current.map((t) => [t.id.toUpperCase(), t]));
+    for (const e of elements) {
+      const id = e.id.toUpperCase();
+      const prev = merged.get(id);
+      const maxLength = e.max_length ?? prev?.maxLength ?? Math.max(e.text.length, 1);
+      if (e.text.length > maxLength) throw new ToolError("INPUT", `El texto ${id} mide ${e.text.length} y su máximo es ${maxLength}.`);
+      merged.set(id, { ...prev, id, text: e.text, maxLength });
+    }
+    const res = await sap.stateful(async (s) => {
+      const lock = await s.lock(obj.uri);
+      try {
+        const parent = lock.CORRNR ? (await orderHeaders(sap, [lock.CORRNR])).get(lock.CORRNR)?.parent : undefined;
+        const d = decideTransport(lock, requested, parent);
+        if (!d.ok) return d;
+        await s.setTextElements(url, category, [...merged.values()], lock.LOCK_HANDLE, d.corrNr || undefined);
+        return d;
+      } finally {
+        await s.unLock(obj.uri, lock.LOCK_HANDLE).catch(() => undefined);
+      }
+    });
+    if (!res.ok) return { text: res.reason, isError: true };
+    return `${obj.name}: ${elements.length} ${category} guardados (${merged.size} en total). ${res.note}\nActiva el objeto para que el cambio sea efectivo.`;
+  },
+});
+
+export default [read, write];

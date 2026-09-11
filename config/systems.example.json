@@ -1,0 +1,37 @@
+{
+  "$comment": "Copiar a ~/.config/abap-adt-dozimple/systems.json. Sin contraseñas: van al llavero con scripts/set-password.sh <id>. defaultSystem es opcional; sin él, cada llamada debe indicar system (o ABAP_DZ_DEFAULT_SYSTEM en el .mcp.json del proyecto).",
+  "systems": [
+    {
+      "id": "MI_DEV",
+      "description": "Cliente X — desarrollo",
+      "sid": "DEV",
+      "url": "https://host:44300",
+      "client": "100",
+      "user": "USUARIO",
+      "language": "ES",
+      "role": "DEV",
+      "allowWrite": false,
+      "modules": []
+    },
+    {
+      "id": "MI_PRD",
+      "description": "Cliente X — productivo (solo lectura siempre)",
+      "sid": "PRD",
+      "url": "https://host-prd:44300",
+      "client": "300",
+      "user": "USUARIO",
+      "role": "PRD"
+    }
+  ],
+  "sidecars": {
+    "docs": {
+      "command": "/ruta/a/vendor/mcp-sap-docs-run.sh",
+      "args": [],
+      "allowOnline": false,
+      "blockTerms": [
+        "NombreCliente1",
+        "NombreCliente2"
+      ]
+    }
+  }
+}
