@@ -300,7 +300,7 @@ MCP client registration:
 (Apache-2.0, `abap` variant) in a separate folder and declare how to start it in `sidecars.docs` of `systems.json`
 (see `config/systems.example.json`). It runs as an isolated process; online search stays off unless `allowOnline`.
 
-To contribute or extend: `git config core.hooksPath .githooks` (secret and customer-data scanner before every commit)
+See [CONTRIBUTING.md](CONTRIBUTING.md). To contribute or extend: `git config core.hooksPath .githooks` (secret and customer-data scanner before every commit)
 and the [`nueva-tool`](.claude/skills/nueva-tool/SKILL.md) guide — adding a tool means adding one file. Code comments
 and tool descriptions are in Spanish; contributions in English are welcome.
 
