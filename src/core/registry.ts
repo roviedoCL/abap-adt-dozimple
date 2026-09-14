@@ -269,6 +269,18 @@ function describe(def: ToolDef<any>, cfg: Config): string {
   return notes.length ? `${def.description}\n\n${notes.join(" ")}` : def.description;
 }
 
+/**
+ * Un parámetro desconocido es un error, no algo que se ignora: `transprot` mal
+ * escrito no puede acabar en una llamada sin la orden que el usuario quería.
+ * El schema publicado sigue diciendo additionalProperties: false.
+ */
+export function strictInput(tool: string, shape: z.ZodRawShape) {
+  const known = Object.keys(shape);
+  return z.object(shape).strict(
+    `Parámetro desconocido para ${tool}: no se ejecutó nada. Admitidos: ${known.length ? known.join(", ") : "ninguno"}.`,
+  );
+}
+
 /** Pistas MCP para el cliente: las escrituras se marcan destructivas para que pida confirmación. */
 export function annotationsFor(def: ToolDef<any>) {
   const readOnly = def.access === "read" || def.access === "local";
@@ -304,10 +316,11 @@ export function registerAll(
 
   for (const def of defs) {
     if (!isVisible(def, config)) continue;
-    const inputSchema =
+    const shape =
       def.access === "local"
         ? def.input
         : { ...def.input, system: systemParam, ...(def.access === "write" ? { confirm_token: confirmParam } : {}) };
+    const inputSchema = strictInput(def.name, shape);
     server.registerTool(
       def.name,
       {

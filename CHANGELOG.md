@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Seguridad
+- **Parámetros desconocidos rechazados**: una llamada con un parámetro que la tool no declara (p. ej. `transprot` mal
+  escrito) falla con la lista de parámetros admitidos y no ejecuta nada; antes se descartaba en silencio.
 - **Escrituras con confirmación humana obligatoria.** `write_source`, `activate`, `write_text_elements` y
   `create_transport` devuelven primero una vista previa (sintaxis real de SAP y diff) y solo escriben tras la
   confirmación: por elicitación MCP si el cliente la soporta, o con un token de un solo uso atado a tool, sistema y
