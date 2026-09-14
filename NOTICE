@@ -1,0 +1,19 @@
+abap-adt-doZimple
+Copyright 2026 DoZimple (https://dozimple.cl)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+"DoZimple" and "DoZimple Transport Risk" are names of DoZimple. The Apache License
+does not grant permission to use them except as required to describe the origin
+of the software (Apache-2.0, section 6).
+
+The DoZimple Transport Risk tools in src/tools/transport-risk are the client of a
+proprietary SAP component of DoZimple, which is NOT part of this repository and is
+not covered by this license. To implement it: https://dozimple.cl
+
+This product uses third-party software under its own licenses; see
+THIRD_PARTY_NOTICES.md. Credits for the projects whose code, data or ideas are used
+are listed in README.md and docs/TOOLS.md.
+
+SAP, ABAP, S/4HANA and other SAP products are trademarks of SAP SE. This project is
+not affiliated with or endorsed by SAP SE.

@@ -32,7 +32,7 @@
     "typescript": "5.9.3",
     "vitest": "5.0.0"
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "author": "DoZimple (https://dozimple.cl)",
   "homepage": "https://dozimple.cl",
   "keywords": [

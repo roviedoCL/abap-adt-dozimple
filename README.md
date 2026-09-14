@@ -2,7 +2,7 @@
 
 # abap-adt-doZimple
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1) ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 **IA que trabaja en tu SAP con las reglas de un consultor senior.**
 
@@ -344,4 +344,7 @@ Este MCP es un ejemplo de cómo trabajamos: IA útil, con control, trazabilidad 
 
 ---
 
-© 2026 [DoZimple](https://dozimple.cl). Todos los derechos reservados — ver [LICENSE](LICENSE).
+## Licencia
+
+[Apache-2.0](LICENSE) — © 2026 [DoZimple](https://dozimple.cl). Ver también [NOTICE](NOTICE). El componente SAP de
+DoZimple Transport Risk es propietario y no forma parte de este repositorio.
