@@ -1,19 +1,15 @@
 import { z } from "zod";
 import { defaultVariant, recallRun, rememberRun, runAtc } from "../../core/atc.js";
 import { normalizeError, ToolError } from "../../core/errors.js";
+import { decodeEntities, htmlToText } from "../../core/feeds.js";
 import { sourceObjectsOf } from "../../core/revisions.js";
 import { budget } from "../../core/output.js";
 import { resolveByTypePrefix, resolveObject, sqlLiteral, TYPE_HELP } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { defineTool } from "../../core/tool.js";
 
-const decode = (s: string) =>
-  s.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&#39;/g, "'");
-const strip = (html: string) =>
-  decode(html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h\d|li|tr)>/gi, "\n").replace(/<[^>]+>/g, " "))
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n\s+/g, "\n")
-    .trim();
+const decode = decodeEntities;
+const strip = htmlToText;
 
 export default defineTool({
   name: "run_atc",

@@ -16,6 +16,9 @@ import type { ToolDef } from "../core/tool.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
 
+/** Texto seguro dentro de una celda de tabla Markdown: primero las barras invertidas, luego «|» y saltos. */
+const mdCell = (s: string) => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
+
 const ACCESS: Record<string, string> = {
   read: "Solo lectura",
   exec: "Ejecuta código (solo sistemas DEV)",
@@ -46,7 +49,7 @@ function describeParam(t: ZodTypeAny): { type: string; def?: string; desc: strin
     const el = cur._def.type;
     type = el._def?.typeName === "ZodObject" ? `lista de { ${Object.keys(el.shape).join(", ")} }` : `lista de ${describeParam(el).type}`;
   }
-  return { type, def, desc: desc.replace(/\|/g, "\\|").replace(/\n/g, " "), optional };
+  return { type, def, desc: mdCell(desc), optional };
 }
 
 function toolSection(d: ToolDef<any>, credits: Array<keyof typeof CREDITS>): string {
@@ -128,7 +131,7 @@ function readmeBlocks(lang: Lang): Record<string, string> {
   const en = lang === "en";
   const gTitle = (g: (typeof GROUPS)[number]) => (en ? GROUPS_EN[g.id].title : g.title);
   const gPitch = (g: (typeof GROUPS)[number]) => (en ? GROUPS_EN[g.id].pitch : g.pitch);
-  const esc = (x: string) => x.replace(/\|/g, "\\|");
+  const esc = mdCell;
 
   const groups = [
     en ? "| Group | What for | Tools |" : "| Grupo | Para qué | Tools |",

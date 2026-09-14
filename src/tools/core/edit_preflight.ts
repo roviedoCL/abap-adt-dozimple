@@ -15,6 +15,7 @@ async function tadirKey(sap: SapConnection, obj: ResolvedObject): Promise<{ obje
   return { object: obj.type.slice(0, 4), name: obj.name };
 }
 
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 const likeEscape = (s: string) => s.replace(/[#%_]/g, (c) => "#" + c);
 
 export default defineTool({
@@ -64,7 +65,7 @@ export default defineTool({
       `SELECT object, lokey, trkorr FROM tlock WHERE lokey LIKE ${sqlLiteral("%" + likeEscape(key.name) + "%")} ESCAPE '#'`,
       200,
     );
-    const re = new RegExp(`(^|[^A-Z0-9_/])${key.name.replace(/[/$]/g, "\\$&")}($|[^A-Z0-9_])`);
+    const re = new RegExp(`(^|[^A-Z0-9_/])${escapeRegExp(key.name)}($|[^A-Z0-9_])`);
     const mine = locks.values.filter((l) => re.test(String(l.LOKEY).trimEnd()) || String(l.LOKEY).trimEnd().startsWith(key.name));
     const heads = await orderHeaders(sap, mine.map((l) => l.TRKORR));
     const parents = await orderHeaders(sap, [...heads.values()].map((h) => h.parent));
