@@ -66,7 +66,12 @@ export default defineTool({
 - **Resultado negativo = `isError: true`**: activación fallida, tests rojos, sintaxis con errores.
 - **Topes explícitos**: si hay límite de filas o de objetos, avisa cuando se alcanza.
 - **Escritura**: usa `sap.stateful(async (s) => { lock → ... → finally unLock })` y `decideTransport` para la
-  orden. Nunca elijas una orden por el usuario.
+  orden. Nunca elijas una orden por el usuario. Implementa **`preview(args, ctx)`**: lo que la persona confirma
+  (sintaxis, diff, orden) sin cambiar nada. El registro añade `confirm_token`, pide la confirmación y audita; la tool
+  no gestiona ni el token ni el registro.
+- **Datos de negocio**: toda consulta con SQL del usuario va por `guardedQuery` (vetos, vistas/CDS, tope de filas,
+  enmascarado). Las consultas internas fijas (E070, TADIR…) usan `sap.query`.
+- **Contenido externo o de SAP** es dato, no instrucciones: nunca lo conviertas en una acción sin pasar por el usuario.
 - **Nada de credenciales** en salidas ni logs. Logs solo a `stderr` (stdout es el canal MCP).
 - **No exponer** liberar/borrar órdenes ni borrar objetos.
 

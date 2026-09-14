@@ -1,5 +1,5 @@
 {
-  "$comment": "Copiar a ~/.config/abap-adt-dozimple/systems.json. Sin contraseñas: van al llavero con scripts/set-password.sh <id>. defaultSystem es opcional; sin él, cada llamada debe indicar system (o ABAP_DZ_DEFAULT_SYSTEM en el .mcp.json del proyecto).",
+  "$comment": "Copiar a ~/.config/abap-adt-dozimple/systems.json. Sin contraseñas: van al llavero con scripts/set-password.sh <id>. defaultSystem es opcional; sin él, cada llamada debe indicar system (o ABAP_DZ_DEFAULT_SYSTEM en el .mcp.json del proyecto). dataClass (test|masked|prod) y maxRows son opcionales: por defecto DEV = test y QAS/PRD = prod (columnas personales enmascaradas, 200 filas). Permisos del archivo: chmod 600.",
   "systems": [
     {
       "id": "MI_DEV",
@@ -20,7 +20,9 @@
       "url": "https://host-prd:44300",
       "client": "300",
       "user": "USUARIO",
-      "role": "PRD"
+      "role": "PRD",
+      "dataClass": "prod",
+      "maxRows": 200
     }
   ],
   "sidecars": {

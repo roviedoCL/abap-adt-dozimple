@@ -9,3 +9,4 @@ config/systems.json
 *.p12
 *.pfx
 .DS_Store
+sbom.cdx.json

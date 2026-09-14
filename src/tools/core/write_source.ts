@@ -2,6 +2,7 @@ import { z } from "zod";
 import { activateObject } from "../../core/activation.js";
 import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
 import { CLASS_INCLUDES, resolveObject, sourceUrl, TYPE_HELP } from "../../core/objects.js";
+import { diffLines, unified } from "../../core/diff.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { decideTransport, orderHeaders } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
@@ -23,6 +24,32 @@ export default defineTool({
     transport: z.string().optional().describe("Orden (o tarea) donde debe ir el cambio. Obligatoria salvo objetos locales"),
     activate: z.boolean().default(true),
     skip_syntax_check: z.boolean().default(false),
+  },
+  async preview({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap }) {
+    const requested = transport ? assertTrkorr(transport) : undefined;
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    const url = await sourceUrl(c, obj, include);
+    const current = await c.getObjectSource(url);
+    const out = [
+      `${obj.name} (${obj.type})${include !== "main" ? ` · include ${include}` : ""} · paquete ${obj.packageName ?? "?"}`,
+      `Orden: ${requested ?? "ninguna indicada (solo vale para objetos locales)"} · activar después: ${activate ? "sí" : "no"}`,
+    ];
+    if (skip_syntax_check) out.push("Sintaxis: NO se comprobará (skip_syntax_check=true).");
+    else {
+      const msgs = await syntaxCheck(c, obj, url, source);
+      out.push(msgs.some(isError) ? `Sintaxis: CON ERRORES, la escritura se detendrá.\n${renderSyntax(msgs)}` : `Sintaxis: sin errores${msgs.length ? ` (${msgs.length} avisos)` : ""}.`);
+    }
+    const ops = diffLines(current, source);
+    if (!ops) out.push("", "Cambio: el objeto se reescribe casi entero (demasiadas diferencias para mostrarlas como diff).");
+    else {
+      const u = unified(ops, 3);
+      const lines = u.text.split("\n");
+      out.push("", u.hunks ? `Cambio: +${u.added} −${u.removed} en ${u.hunks} bloques` : "Cambio: ninguno (la fuente es idéntica a la guardada).");
+      if (u.hunks) out.push(lines.slice(0, 400).join("\n") + (lines.length > 400 ? `\n[… ${lines.length - 400} líneas más de diff]` : ""));
+    }
+    out.push("", "Si el objeto está bloqueado en otra orden, la escritura se detendrá sin guardar (compruébalo antes con edit_preflight).");
+    return out.join("\n");
   },
   async run({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap }) {
     const requested = transport ? assertTrkorr(transport) : undefined;

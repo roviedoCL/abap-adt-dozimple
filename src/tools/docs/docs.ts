@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { Config } from "../../core/config.js";
+import { ToolError } from "../../core/errors.js";
 import { assertPublicQuery } from "../../core/policy.js";
 import { defineTool, type ToolContext, type ToolResult } from "../../core/tool.js";
 
@@ -43,6 +45,28 @@ const docsSearch = defineTool({
   },
 });
 
+/** Ids que el componente sirve desde internet (el resto son rutas de la biblioteca local). */
+const ONLINE_ID = /^(community|sap-help)-[A-Za-z0-9._~:@+%-]+$/;
+const LOCAL_ID = /^\/[A-Za-z0-9._~\/#:@+-]+$/;
+
+/** Un id no es un canal para sacar datos: forma cerrada, y los online solo si la búsqueda online está permitida. */
+export function assertDocId(id: string, cfg: Config): void {
+  if (LOCAL_ID.test(id) && !id.includes("..")) return;
+  if (ONLINE_ID.test(id)) {
+    const sc = cfg.sidecars[SIDE];
+    if (!sc?.allowOnline) throw new ToolError("POLICY", `«${id}» es un documento online y la búsqueda online está deshabilitada (sidecars.docs.allowOnline).`);
+    let decoded = id;
+    try {
+      decoded = decodeURIComponent(id);
+    } catch {
+      throw new ToolError("INPUT", `«${id}» no es un id de documento válido.`);
+    }
+    assertPublicQuery(decoded.replace(/[-/:.?=&#]/g, " "), cfg, sc.blockTerms);
+    return;
+  }
+  throw new ToolError("INPUT", `«${id}» no es un id de documento: usa uno de los que devuelve docs_search.`);
+}
+
 const docsFetch = defineTool({
   name: "docs_fetch",
   title: "Leer un documento de la documentación",
@@ -51,8 +75,11 @@ const docsFetch = defineTool({
     "documento, nunca datos del usuario.",
   access: "local",
   requires: { sidecar: SIDE },
-  input: { id: z.string().min(2) },
-  run: ({ id }, ctx) => call(ctx, "fetch", { id }),
+  input: { id: z.string().min(2).max(300) },
+  run: ({ id }, ctx) => {
+    assertDocId(id, ctx.config);
+    return call(ctx, "fetch", { id });
+  },
 });
 
 const featureMatrix = defineTool({

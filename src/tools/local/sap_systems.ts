@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { canWrite } from "../../core/config.js";
+import { dataClassOf, rowCap } from "../../core/datapolicy.js";
 import { normalizeError } from "../../core/errors.js";
 import { eligibleSystems, isVisible } from "../../core/registry.js";
 import { defineTool } from "../../core/tool.js";
@@ -23,6 +24,7 @@ export default defineTool({
       const flags = [
         s.role,
         canWrite(s) ? "escritura" : "solo lectura",
+        `datos ${dataClassOf(s)} (tope ${rowCap(s)} filas${dataClassOf(s) === "test" ? "" : ", columnas personales enmascaradas"})`,
         ...(s.modules.length ? [`módulos: ${s.modules.join(", ")}`] : []),
         ...(s.allowSelfSigned && !s.caFile ? ["⚠ TLS SIN VERIFICAR (configura caFile)"] : []),
       ];

@@ -207,7 +207,7 @@ Chequeo de sintaxis real de SAP (no abaplint). Si pasas `source`, se comprueba E
 
 ### `run_unit_tests` — Ejecutar ABAP Unit
 
-Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada fallo. Si no hay clases de test lo dice: cero tests no es un éxito.
+Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada fallo. Solo corre tests RISK LEVEL HARMLESS y DURATION SHORT. Si no hay clases de test lo dice: cero tests no es un éxito.
 
 | | |
 |---|---|
@@ -384,7 +384,7 @@ Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de 
 
 ### `sql_query` — Consulta ABAP SQL
 
-Ejecuta un SELECT de ABAP SQL (con WHERE, JOIN, ORDER BY, subconsultas) vía la vista previa de datos de ADT. Solo lectura. Sintaxis ABAP SQL: literales entre comillas simples, sin «;», sin UP TO (usa max_rows). Útil para E070/E071/TADIR/TLOCK/DD03L y datos de negocio.
+Ejecuta un SELECT de ABAP SQL (con WHERE, JOIN, ORDER BY, subconsultas) vía la vista previa de datos de ADT. Solo lectura. Sintaxis ABAP SQL: literales entre comillas simples, sin «;», sin UP TO (usa max_rows). Útil para E070/E071/TADIR/TLOCK/DD03L y datos de negocio. En sistemas con datos productivos las columnas personales salen enmascaradas y hay un tope de filas por sistema.
 
 | | |
 |---|---|
@@ -401,7 +401,7 @@ Ejecuta un SELECT de ABAP SQL (con WHERE, JOIN, ORDER BY, subconsultas) vía la 
 
 ### `table_contents` — Contenido de una tabla
 
-Filas de una tabla, vista o CDS, con columnas y filtro opcionales. Atajo de sql_query para el caso típico «enséñame lo que hay en ZTABLA donde …». Para JOIN o agregados usa sql_query.
+Filas de una tabla, vista o CDS, con columnas y filtro opcionales. Atajo de sql_query para el caso típico «enséñame lo que hay en ZTABLA donde …». Para JOIN, subconsultas o agregados usa sql_query.
 
 | | |
 |---|---|
@@ -662,6 +662,7 @@ Sustituye la fuente COMPLETA de un objeto existente (o de un include de clase), 
 | `transport` | string |  | Orden (o tarea) donde debe ir el cambio. Obligatoria salvo objetos locales |
 | `activate` | boolean | true |  |
 | `skip_syntax_check` | boolean | false |  |
+| `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio
 
@@ -680,6 +681,7 @@ Activa un objeto y devuelve los mensajes de SAP tal cual (errores con línea, av
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
 | `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio
 
@@ -701,6 +703,7 @@ Añade o modifica símbolos de texto (o textos de selección) de un programa/cla
 | `category` | `symbols` \| `selections` \| `headings` | "symbols" |  |
 | `elements` * | lista de { id, text, max_length } |  |  |
 | `transport` | string |  |  |
+| `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio
 
@@ -721,6 +724,7 @@ Crea una orden workbench para el paquete de un objeto, ANTES de la primera edici
 | `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
 | `text` * | string |  | Texto de la orden (máx. 60, E07T-AS4TEXT) |
 | `transport_layer` | string |  |  |
+| `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio
 
@@ -789,7 +793,7 @@ Ranking de objetos por historial de fallos de importación en un destino. Sirve 
 
 ### `change_audit` — Evidencia de auditoría de cambios
 
-Evidencia para una auditoría de gestión de cambios en un destino: qué entró, con qué ticket, de qué iniciativa y origen. `tickets`, `iniciativas` y `origenes` son lo que la organización declara y el sistema no puede deducir (p. ej. tickets «DMND,INC,^ERU»; iniciativas «62910=Absorción de legados,^BC=Basis»).
+Evidencia para una auditoría de gestión de cambios en un destino: qué entró, con qué ticket, de qué iniciativa y origen. `tickets`, `iniciativas` y `origenes` son lo que la organización declara y el sistema no puede deducir (p. ej. tickets «CHG,INC,^RFC»; iniciativas «10001=Proyecto demo,^BC=Basis»).
 
 | | |
 |---|---|

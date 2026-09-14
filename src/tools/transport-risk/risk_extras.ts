@@ -39,7 +39,7 @@ const changeAudit = defineTool({
   description:
     "Evidencia para una auditoría de gestión de cambios en un destino: qué entró, con qué ticket, de qué " +
     "iniciativa y origen. `tickets`, `iniciativas` y `origenes` son lo que la organización declara y el sistema no " +
-    "puede deducir (p. ej. tickets «DMND,INC,^ERU»; iniciativas «62910=Absorción de legados,^BC=Basis»).",
+    "puede deducir (p. ej. tickets «CHG,INC,^RFC»; iniciativas «10001=Proyecto demo,^BC=Basis»).",
   access: "read",
   requires: { module: RISK_MODULE },
   input: {

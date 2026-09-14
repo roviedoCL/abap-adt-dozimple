@@ -36,8 +36,9 @@ export function assertSelectOnly(sql: string): string {
 /**
  * Material de credenciales que el servidor no lee nunca, aunque el usuario SAP
  * tenga autorización: hashes de contraseñas, almacén seguro (donde viven las
- * claves de los destinos RFC) y PSE con claves privadas. Un agente no lo
- * necesita, y una respuesta de tool puede acabar en un log, un ticket o un
+ * claves de los destinos RFC), PSE con claves privadas, secretos OAuth, ACL de
+ * usuarios y dumps (SNAP guarda valores de variables en memoria). Un agente no
+ * lo necesita, y una respuesta de tool puede acabar en un log, un ticket o un
  * proveedor de LLM. La configuración sin secretos (RFCDES, RFCSYSACL, AGR_*)
  * sí se puede leer: la usa el análisis de Basis.
  */
@@ -45,20 +46,51 @@ export const SENSITIVE_TABLES = [
   "USR02", "USH02", "USRPWDHISTORY", "USH02_ARC_TMP",
   "RSECTAB", "RSECACTB",
   "SSF_PSE_D", "SSF_PSE_H", "SSF_PSE_L",
+  "USRACL", "SNAP",
 ];
+export const SENSITIVE_PREFIXES = ["OA2C_"];
 export const SENSITIVE_COLUMNS = ["PWDSALTEDHASH", "BCODE", "PASSCODE"];
 
-export function assertNotSensitive(sql: string): void {
-  const words = new Set(sql.toUpperCase().match(/[A-Z0-9_/]+/g) ?? []);
-  const hit = [...SENSITIVE_TABLES, ...SENSITIVE_COLUMNS].filter((w) => words.has(w));
-  if (hit.length) {
+/** Datos de personal (infotipos, clusters de nómina): categoría especial, nunca por este servidor. */
+export const HR_TABLE_RE = /^(PA\d{4}|PB\d{4}|PCL[1-5]|HRPY_[A-Z0-9_]+)$/;
+
+/** Qué palabras de una consulta (o de una definición de vista) son material vetado. */
+export function sensitiveHits(words: Iterable<string>): { secrets: string[]; hr: string[] } {
+  const secrets = new Set<string>();
+  const hr = new Set<string>();
+  for (const raw of words) {
+    const w = raw.toUpperCase();
+    if (SENSITIVE_TABLES.includes(w) || SENSITIVE_COLUMNS.includes(w) || SENSITIVE_PREFIXES.some((p) => w.startsWith(p))) secrets.add(w);
+    else if (HR_TABLE_RE.test(w)) hr.add(w);
+  }
+  return { secrets: [...secrets], hr: [...hr] };
+}
+
+export function sqlWords(sql: string): string[] {
+  return sql.replace(/'(?:[^']|'')*'/g, " ").toUpperCase().match(/[A-Z0-9_/]+/g) ?? [];
+}
+
+export function rejectSensitive(hits: { secrets: string[]; hr: string[] }, via?: string): void {
+  const how = via ? ` a través de ${via}` : "";
+  if (hits.secrets.length) {
     throw new ToolError(
       "POLICY",
-      `Consulta bloqueada: toca datos de seguridad (${hit.join(", ")}). Este servidor no lee credenciales, ` +
-        `hashes, almacén seguro ni claves privadas.`,
-      "Si necesitas el estado de un usuario (bloqueo, validez), usa SU01 o pide la columna concreta a Basis.",
+      `Consulta bloqueada: toca datos de seguridad${how} (${hits.secrets.join(", ")}). Este servidor no lee credenciales, ` +
+        `hashes, almacén seguro, claves privadas ni dumps.`,
+      "Si necesitas el estado de un usuario (bloqueo, validez), usa SU01 o pide la columna concreta a Basis; para dumps, la tool dumps.",
     );
   }
+  if (hits.hr.length) {
+    throw new ToolError(
+      "POLICY",
+      `Consulta bloqueada: datos de personal${how} (${hits.hr.join(", ")}). Este servidor no lee infotipos ni nómina.`,
+      "Para la estructura, ddic_type_info o get_source sobre la tabla (definición, no datos).",
+    );
+  }
+}
+
+export function assertNotSensitive(sql: string): void {
+  rejectSensitive(sensitiveHits(sqlWords(sql)));
 }
 
 const GENERIC_LABELS = new Set(["com", "net", "org", "sap", "corp", "local", "cloud", "hana", "ondemand", "intra", "internal", "prod", "dev"]);

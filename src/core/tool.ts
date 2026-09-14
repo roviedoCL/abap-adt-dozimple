@@ -29,6 +29,11 @@ export interface ToolEnv {
   pool: ConnectionPool;
   tools: readonly ToolDef<any>[];
   sidecars?: SidecarPool;
+  /**
+   * Pregunta al usuario vía elicitación MCP. Solo existe si el cliente la
+   * soporta; si no, las escrituras se confirman con token en dos fases.
+   */
+  elicit?: (message: string) => Promise<"accept" | "decline" | "cancel">;
 }
 
 export type ToolResult = string | { text: string; isError?: boolean };
@@ -51,6 +56,11 @@ export interface ToolDef<S extends ZodRawShape = ZodRawShape> {
     online?: boolean;
   };
   run(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<ToolResult>;
+  /**
+   * Solo tools write: qué va a cambiar, sin cambiar nada (diff, sintaxis,
+   * orden). Es lo que el usuario confirma antes de que run() escriba.
+   */
+  preview?(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<string>;
 }
 
 /** Identidad tipada: da inferencia de los argumentos a partir de `input`. */

@@ -26,10 +26,13 @@ export async function getPassword(s: SystemConfig): Promise<string> {
     }
   } else {
     try {
-      const { stdout } = await run("security", [
-        "find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", s.id, "-w",
-      ]);
+      // macOS: llavero. Linux: Secret Service (GNOME Keyring / KWallet) vía secret-tool.
+      const { stdout } =
+        process.platform === "linux"
+          ? await run("secret-tool", ["lookup", "service", KEYCHAIN_SERVICE, "account", s.id])
+          : await run("security", ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", s.id, "-w"]);
       pwd = stdout.replace(/\n$/, "");
+      if (!pwd) throw new Error("vacía");
     } catch {
       throw new ToolError(
         "AUTH",
