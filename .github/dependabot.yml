@@ -10,6 +10,9 @@ updates:
       # additionalProperties:false. Quitar al cerrar el issue #4 del repositorio.
       - dependency-name: zod
         update-types: ["version-update:semver-major"]
+      # Los tipos de Node siguen a la versión mínima soportada (engines: node >=22), no a la última.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
