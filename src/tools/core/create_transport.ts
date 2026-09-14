@@ -18,6 +18,13 @@ export default defineTool({
     text: z.string().min(5).max(60).describe("Texto de la orden (máx. 60, E07T-AS4TEXT)"),
     transport_layer: z.string().optional(),
   },
+  async preview({ object_name, object_type, text, transport_layer }, { sap }) {
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    if (!obj.packageName) throw new ToolError("INPUT", `No se pudo determinar el paquete de ${obj.name}.`);
+    if (obj.packageName.startsWith("$")) throw new ToolError("INPUT", `${obj.name} es local (${obj.packageName}): no necesita orden.`);
+    return `Se creará una orden workbench nueva:\n  Texto: «${text}»\n  Paquete: ${obj.packageName} (de ${obj.name})\n  Capa: ${transport_layer ?? "la del paquete"}\nNo se libera nada.`;
+  },
   async run({ object_name, object_type, text, transport_layer }, { sap }) {
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);

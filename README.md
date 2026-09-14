@@ -40,7 +40,7 @@ El agente elige las tools, las encadena y responde con evidencia. Cada respuesta
 | | Enfoque habitual | **abap-adt-doZimple** |
 |---|---|---|
 | Sistemas | Uno por instancia, sin roles | Todos los de la organización, con política por rol: DEV / QAS / PRD |
-| Escritura | Guarda donde SAP decida, o no permite escribir | Solo en desarrollo, con orden explícita; se detiene ante un bloqueo CTS ajeno |
+| Escritura | Guarda donde SAP decida, o no permite escribir | Solo en desarrollo, con orden explícita, vista previa y confirmación humana; se detiene ante un bloqueo CTS ajeno |
 | Verificación | abaplint o nada | Sintaxis real de SAP, también sobre código aún no guardado |
 | Resultados ante un fallo | Listas vacías o «OK» engañosos | Error tipado que dice qué no se pudo comprobar y por qué |
 | Releases | Endpoints fijos | Capacidades leídas del discovery ADT de cada sistema |
@@ -210,7 +210,7 @@ la **[referencia completa](docs/TOOLS.md)**.
 | Tool | Qué hace | Acceso |
 |---|---|---|
 | [`sap_systems`](docs/TOOLS.md#operacion) | **Sistemas SAP y tools disponibles.** Lista los sistemas configurados (rol, escritura, módulos). | local |
-| [`report_gap`](docs/TOOLS.md#operacion) | **Anotar una tool que falta.** Anota una necesidad que ninguna tool cubre (p. | local |
+| [`report_gap`](docs/TOOLS.md#operacion) | **Anotar una tool que falta.** Anota una necesidad que ninguna tool cubre (p. ej. «crear una tabla en 7.50», «liberar una tarea», «leer un SmartForm»), con el rodeo que se usó. | local |
 | [`usage_stats`](docs/TOOLS.md#operacion) | **Uso de las tools y huecos.** Resumen del registro local: llamadas por tool, tasa de fallo y tipo de fallo, sistemas, y los huecos anotados con report_gap agrupados. | local |
 
 <!-- tools:end -->
@@ -256,20 +256,27 @@ Diseñado para poder presentarse ante Seguridad y Basis sin excepciones. Detalle
 - **Sin superficie de red:** solo stdio; no abre puertos.
 - **Credenciales en el llavero del sistema operativo,** nunca en archivos, logs ni respuestas.
 - **Política por rol:** calidad y productivo nunca se escriben; en desarrollo, solo con autorización explícita.
-- **Material de credenciales de SAP bloqueado** en las consultas SQL, aunque el usuario tenga autorización.
+- **Ninguna escritura sin confirmación humana:** vista previa con la sintaxis de SAP y el diff real, y confirmación
+  por elicitación o con un token de un solo uso atado a esos argumentos exactos.
+- **Registro de auditoría encadenado por hash** de toda escritura y ejecución, verificable con `npm run audit:verify`.
+- **Material de credenciales y datos de personal de SAP bloqueados** en las consultas SQL, también a través de vistas
+  y CDS, aunque el usuario tenga autorización.
+- **Datos personales enmascarados y tope de filas** en sistemas con datos productivos.
 - **Nada de datos del cliente hacia internet:** la búsqueda online de documentación está apagada por defecto y,
   si se habilita, se filtra toda consulta con objetos, órdenes, sistemas, usuarios o nombres de cliente.
 - **Terceros aislados** en su propio proceso y con entorno mínimo.
-- **Cadena de suministro controlada:** 4 dependencias de producción con versión exacta, auditoría y escaneo de
-  secretos en cada commit y en CI.
+- **Cadena de suministro controlada:** 4 dependencias de producción con versión exacta, sin scripts de instalación,
+  firmas verificadas, SBOM CycloneDX, auditoría y escaneo de secretos en cada commit y en CI.
+
+Modelo de amenazas con STRIDE y OWASP Top 10 para aplicaciones LLM: **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)**.
 
 ## Compatibilidad
 
 | | |
 |---|---|
-| SAP | ECC 6.0 / NetWeaver 7.50 en adelante y S/4HANA on-premise o private cloud, vía ADT (`/sap/bc/adt`). Probado en vivo en S/4HANA 2023 (SAP_BASIS 7.58). Las funciones que dependen del release (p. ej. estado de liberación de APIs) se detectan por sistema |
+| SAP | ECC 6.0 / NetWeaver 7.50 en adelante y S/4HANA on-premise o private cloud, vía ADT (`/sap/bc/adt`). Probado en vivo en S/4HANA 2023 (SAP_BASIS 7.58) y ECC 6.0 EHP8 (SAP_BASIS 7.50). Las funciones que dependen del release (p. ej. estado de liberación de APIs) se detectan por sistema |
 | Clientes MCP | Claude Code, Kiro y cualquier cliente compatible con MCP por stdio |
-| Plataforma | Node.js 22+. Credenciales en el llavero de macOS (o variables de entorno) |
+| Plataforma | Node.js 22+. Credenciales en el llavero de macOS, en el Secret Service de Linux o en variables de entorno |
 
 ## Instalación
 
@@ -277,7 +284,7 @@ Diseñado para poder presentarse ante Seguridad y Basis sin excepciones. Detalle
 npm ci && npm run build
 mkdir -p ~/.config/abap-adt-dozimple
 cp config/systems.example.json ~/.config/abap-adt-dozimple/systems.json   # sistemas, roles y permisos
-scripts/set-password.sh MI_DEV                                           # pide la clave; va al llavero
+scripts/set-password.sh MI_DEV                                           # pide la clave; va al llavero (--strict: confirma cada lectura)
 npm run smoke -- MI_DEV                                                  # validación de solo lectura
 ```
 

@@ -12,9 +12,11 @@
     "test": "vitest run",
     "smoke": "node dist/scripts/smoke.js",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "security": "npm audit --omit=dev && node scripts/scan-sensitive.mjs",
+    "security": "npm audit --omit=dev && npm audit signatures && node scripts/scan-sensitive.mjs",
     "check": "npm test && npm run build && npm run security",
-    "docs": "npm run build && node dist/scripts/gen-docs.js"
+    "docs": "npm run build && node dist/scripts/gen-docs.js",
+    "audit:verify": "node dist/scripts/audit-verify.js",
+    "sbom": "npm sbom --omit=dev --sbom-format=cyclonedx --sbom-type=application > sbom.cdx.json"
   },
   "engines": {
     "node": ">=22"

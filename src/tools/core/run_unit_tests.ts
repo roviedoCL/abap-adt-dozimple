@@ -2,12 +2,19 @@ import { z } from "zod";
 import { resolveObject, TYPE_HELP } from "../../core/objects.js";
 import { defineTool } from "../../core/tool.js";
 
+/**
+ * Solo tests inofensivos y cortos, explícito aunque coincida con el valor por
+ * defecto de abap-adt-api: un test «dangerous» o «critical» puede escribir en
+ * base de datos o llamar a sistemas externos.
+ */
+export const SAFE_TEST_FLAGS = { harmless: true, dangerous: false, critical: false, short: true, medium: false, long: false } as const;
+
 export default defineTool({
   name: "run_unit_tests",
   title: "Ejecutar ABAP Unit",
   description:
     "Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada " +
-    "fallo. Si no hay clases de test lo dice: cero tests no es un éxito.",
+    "fallo. Solo corre tests RISK LEVEL HARMLESS y DURATION SHORT. Si no hay clases de test lo dice: cero tests no es un éxito.",
   access: "exec",
   requires: { adt: ["/sap/bc/adt/abapunit/testruns"] },
   input: {
@@ -17,7 +24,7 @@ export default defineTool({
   async run({ object_name, object_type }, { sap }) {
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
-    const classes = await c.unitTestRun(obj.uri);
+    const classes = await c.unitTestRun(obj.uri, { ...SAFE_TEST_FLAGS });
     if (!classes.length) return { text: `${obj.name}: no se encontraron clases de test. No se ejecutó nada.`, isError: true };
 
     let pass = 0;

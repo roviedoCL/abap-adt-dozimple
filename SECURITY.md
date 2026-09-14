@@ -1,32 +1,67 @@
 # Seguridad — abap-adt-doZimple
 
 Criterio del proyecto: **nada que afecte la ciberseguridad** de los clientes ni de DoZimple. Un cambio que debilite
-algo de este documento no se acepta aunque añada funcionalidad.
+algo de este documento no se acepta aunque añada funcionalidad. Análisis completo (STRIDE, OWASP Top 10 para
+aplicaciones LLM, riesgos residuales): **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)**.
 
-## Modelo de amenazas
+## Controles
 
 | Activo | Amenaza | Control |
 |---|---|---|
-| Credenciales SAP | Filtrado en archivos, logs, respuestas o procesos hijo | Llavero del SO (`security`, `execFile` sin shell); la configuración rechaza contraseñas; nunca se escriben en logs ni en respuestas; los procesos hijo reciben solo `HOME`, `PATH`, `USER`, `SHELL`, `TERM` |
-| Sistemas SAP | Cambios no deseados por un agente | `read` / `exec` / `write` por tool; `write` solo en DEV con `allowWrite`; QAS y PRD nunca; tools de escritura ocultas si no hay sistema que la permita; sin liberar, importar ni borrar |
-| Orden de transporte | El cambio cae en una orden ajena | `decideTransport`: orden explícita obligatoria; si hay bloqueo CTS de otra orden, se para sin escribir |
-| Datos sensibles en SAP | Lectura de hashes, almacén seguro o PSE por SQL | `assertNotSensitive` bloquea USR02/USH02/USRPWDHISTORY, RSECTAB/RSECACTB, SSF_PSE_* y columnas de hash, también en subconsultas y JOIN |
-| SQL | Escritura o varias sentencias | Solo `SELECT`/`WITH`, sin `;`; la vista previa de ADT es de solo lectura; literales escapados (`sqlLiteral`) |
+| Credenciales SAP | Filtrado en archivos, logs, respuestas o procesos hijo | Llavero de macOS o Secret Service en Linux (`execFile` sin shell); opción `--strict` para que el llavero pregunte en cada lectura; la configuración no admite contraseñas; nunca en logs ni respuestas; los procesos hijo reciben un entorno explícito mínimo (`PATH`, `HOME`, `TMPDIR`, idioma y terminal) |
+| Sistemas SAP | Cambios no deseados por un agente | `read` / `exec` / `write` por tool; `write` solo en DEV con `allowWrite`; QAS y PRD nunca; tools de escritura ocultas si ningún sistema la permite; sin liberar, importar ni borrar |
+| Escrituras | El agente escribe sin que la persona vea qué | **Confirmación obligatoria**: por elicitación MCP si el cliente la soporta; si no, en dos fases con vista previa (sintaxis de SAP + diff real) y token de un solo uso atado a tool, sistema y argumentos exactos (10 min). Anotación `destructiveHint` para que el cliente también pida permiso |
+| Trazabilidad | Una escritura sin rastro, o un rastro retocado | **Registro de auditoría** local encadenado por hash (`audit.jsonl`): intención, resultado y denegaciones de toda escritura y ejecución, con usuario SAP, sistema, forma de confirmación y huella sha256 del contenido (nunca el contenido). Sin registro no se escribe. `npm run audit:verify` detecta alteraciones |
+| ABAP Unit | Un test con efectos (BD, llamadas externas) | Solo tests `RISK LEVEL HARMLESS` y `DURATION SHORT`, pedido explícitamente; solo en DEV |
+| Orden de transporte | El cambio cae en una orden ajena | `decideTransport`: orden explícita; si hay bloqueo CTS de otra orden, se para sin escribir |
+| Material de seguridad en SAP | Lectura de hashes, almacén seguro, PSE, secretos OAuth o dumps | Veto de USR02/USH02/USRPWDHISTORY, RSECTAB/RSECACTB, SSF_PSE_*, USRACL, SNAP, OA2C_* y columnas de hash, **también a través de vistas (DD26S) y CDS (DDLDEPENDENCY + fuente DDL), hasta 3 niveles** |
+| Datos de personal | Infotipos y nómina | PA\*, PB\*, PCL1-5 y HRPY_\* vetados, también vía vistas y CDS |
+| Datos personales de negocio | Exposición masiva a un proveedor LLM | Clase de datos por sistema (`test` / `masked` / `prod`; por defecto DEV = test, QAS/PRD = prod). En masked/prod: **columnas personales enmascaradas** (nombres, direcciones, teléfonos, correos, identificadores fiscales, cuentas bancarias, fechas de nacimiento), prohibido usarlas en WHERE, alias o expresiones, y **tope de filas** por sistema (200 en prod, configurable) |
+| SQL | Escritura, varias sentencias o inyección en filtros | Solo `SELECT`/`WITH`, sin `;`; vista previa de ADT de solo lectura; literales escapados; en `table_contents` el filtro no admite subconsultas, UNION, comentarios ni comillas sin cerrar |
+| Configuración | Alguien redirige el servidor o habilita la escritura | `systems.json` se rechaza si lo pueden modificar grupo u otros usuarios, o si es de otro usuario; el sistema por defecto por variable de entorno se identifica como tal en cada respuesta, y si no existe es error |
 | Red | Exposición de un puerto | Solo stdio; no se abre ningún puerto |
 | TLS | Intercepción (MitM) | Verificación por defecto; `caFile` para certificados propios; `allowSelfSigned` marcado con ⚠ |
-| Datos de clientes | Salida a internet vía búsqueda de documentación | Online apagado por defecto; si se habilita, `assertPublicQuery` bloquea objetos Z/Y, namespaces, órdenes, sistemas, SID, usuarios, dominios de host y términos configurados |
-| Dependencias de terceros | Vulnerabilidades o código malicioso | 4 dependencias de producción con versión exacta y lockfile; `npm audit` en `npm run security`; los MCP de terceros solo como proceso hijo aislado tras revisión |
-| Inyección de instrucciones | Contenido de SAP o de la web que intenta dirigir al agente | Contenido externo marcado como dato; escritura solo por tools explícitas y con política |
+| Datos de clientes | Salida a internet vía documentación | Online apagado por defecto; si se habilita, `assertPublicQuery` bloquea objetos Z/Y, namespaces, órdenes, sistemas, SID, usuarios, dominios y términos configurados; `docs_fetch` solo acepta ids con forma de documento, y los online pasan el mismo filtro |
+| Inyección de instrucciones | Fuente, textos o datos de SAP o de la web que intentan dirigir al agente | Toda respuesta de SAP y de documentación se marca como dato, nunca instrucciones; ninguna escritura sin confirmación humana con vista previa |
+| Dependencias | Vulnerabilidades o código malicioso | 4 dependencias de producción con versión exacta y lockfile; `ignore-scripts` (sin scripts de instalación); `npm audit` y `npm audit signatures` (firmas y procedencia) en CI; SBOM CycloneDX como artefacto de cada build; acciones de CI fijadas por commit; Dependabot |
+| Terceros | Un MCP externo con acceso a credenciales | Solo como proceso hijo aislado, tras revisión, con entorno mínimo; sus tools pasan por la política de este servidor |
 | Estado local | Lectura por otros usuarios del equipo | Carpetas `700`, archivos `600`; el registro de uso no guarda argumentos |
-| Repositorio | Credenciales o datos de clientes en el historial | `scripts/scan-sensitive.mjs` en `pre-commit` y en `npm run security`, con los términos prohibidos leídos de la configuración local (nunca listados en el repo) |
+| Repositorio | Credenciales o datos de clientes en el historial | `scripts/scan-sensitive.mjs` en `pre-commit` y en CI; los términos prohibidos se leen de la configuración local, nunca se listan en el repo; secret scanning con push protection |
+
+## Recomendaciones de despliegue
+
+- **`scripts/set-password.sh --strict`** (macOS) en equipos compartidos y para las credenciales de productivo: el
+  llavero pide confirmación en cada lectura. No es el valor por defecto a propósito: un aviso por lectura empuja a
+  guardar la contraseña en variables de entorno, que es peor. La solución de fondo prevista es certificado de
+  cliente / SSO ([roadmap](docs/THREAT_MODEL.md#roadmap-de-seguridad)).
+- **No autoaprobar** en el cliente MCP las tools de escritura (`write_source`, `activate`, `write_text_elements`,
+  `create_transport`): la confirmación del servidor es la segunda barrera, no la única.
+- Un **usuario SAP personal** por consultor, con las autorizaciones de su rol. El servidor restringe; no amplía.
+- Clasificar cada sistema con `dataClass` si su realidad no coincide con el rol (p. ej. un DEV con copia de productivo
+  → `"dataClass": "prod"`).
+- Revisar periódicamente `npm run audit:verify` y conservar `audit.jsonl` según la política de retención del equipo.
 
 ## Verificación
 
 ```sh
-npm run security   # npm audit de producción + escáner de credenciales y datos de clientes
-npm test           # incluye tests de política: PRD sin escritura, SQL sensible, consultas públicas, orden de transporte
+npm run security      # npm audit + firmas del registro + escáner de credenciales y datos de clientes
+npm test              # incluye los tests de política y de seguridad (test/security.test.ts)
+npm run audit:verify  # integridad del registro de auditoría local
+npm run sbom          # SBOM CycloneDX de las dependencias de producción
 ```
 
-## Reportar un problema
+## Reportar una vulnerabilidad / Reporting a vulnerability
 
-Contacto a través de https://dozimple.cl. No publiques detalles de una vulnerabilidad antes de que esté corregida.
+**Español.** Escribe a **security@dozimple.cl** o usa la
+[notificación privada de vulnerabilidades](../../security/advisories/new) de GitHub. Incluye versión o commit,
+pasos para reproducir e impacto. Confirmamos la recepción en 5 días hábiles. Aplicamos **divulgación coordinada a
+90 días**: publicamos la corrección y el aviso dentro de ese plazo, o antes si hay un parche; te pedimos no publicar
+detalles hasta entonces. Con gusto te damos crédito en el aviso.
+
+**English.** Email **security@dozimple.cl** or use GitHub
+[private vulnerability reporting](../../security/advisories/new). Include version or commit, reproduction steps and
+impact. We acknowledge within 5 business days and follow **90-day coordinated disclosure**: the fix and advisory are
+published within that window (sooner if a patch is ready); please keep details private until then. We are happy to
+credit you in the advisory.
+
+Nunca envíes credenciales ni datos de clientes en un reporte. / Never include credentials or customer data in a report.

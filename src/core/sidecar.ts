@@ -5,6 +5,15 @@ import { ToolError } from "./errors.js";
 
 const CALL_TIMEOUT_MS = 120_000;
 
+/** Variables que el componente necesita para arrancar. Nada más: ni ABAP_DZ_*, ni tokens, ni proxies con credenciales. */
+const SIDECAR_ENV_KEYS = ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TERM", "USER", "LOGNAME", "SHELL", "SystemRoot"];
+
+export function sidecarEnv(src: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const k of SIDECAR_ENV_KEYS) if (src[k]) env[k] = src[k]!;
+  return env;
+}
+
 /**
  * Un MCP de terceros corriendo como proceso hijo. Aislado a propósito: sus
  * dependencias no se cargan en este proceso (que tiene las credenciales SAP),
@@ -25,6 +34,7 @@ export class Sidecar {
         const transport = new StdioClientTransport({
           command: this.cfg.command,
           args: this.cfg.args,
+          env: sidecarEnv(),
           // Su stdout es el canal MCP; su stderr se descarta (nunca a nuestro stdout).
           stderr: "ignore",
         });

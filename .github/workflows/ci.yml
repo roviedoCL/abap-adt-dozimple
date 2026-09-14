@@ -27,6 +27,15 @@ jobs:
       - run: npm run build
       - name: Auditoría de dependencias de producción
         run: npm audit --omit=dev --audit-level=moderate
+      - name: Firmas y procedencia de los paquetes del registro
+        run: npm audit signatures
+      - name: SBOM CycloneDX de las dependencias de producción
+        run: npm sbom --omit=dev --sbom-format=cyclonedx --sbom-type=application > sbom.cdx.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          retention-days: 90
       - name: Escáner de secretos (patrones genéricos; los términos de clientes solo existen en local)
         run: node scripts/scan-sensitive.mjs
       - name: La documentación generada está al día

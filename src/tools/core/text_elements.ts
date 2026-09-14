@@ -1,12 +1,28 @@
 import { z } from "zod";
-import { textElementsUrl, type TextElement } from "abap-adt-api";
+import { textElementsUrl, type ADTClient, type TextElement } from "abap-adt-api";
 import { ToolError } from "../../core/errors.js";
-import { resolveObject, TYPE_HELP } from "../../core/objects.js";
+import { resolveObject, TYPE_HELP, type ResolvedObject } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { decideTransport, orderHeaders } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 
 const CATEGORIES = ["symbols", "selections", "headings"] as const;
+
+type Category = (typeof CATEGORIES)[number];
+
+/** Fusiona los textos pedidos con los existentes; valida longitudes. */
+async function mergeTexts(c: ADTClient, obj: ResolvedObject, category: Category, elements: { id: string; text: string; max_length?: number }[]) {
+  const current = (await c.getTextElements(textElementsUrl(obj.type, obj.name), category)).textElements;
+  const merged = new Map<string, TextElement>(current.map((t) => [t.id.toUpperCase(), t]));
+  for (const e of elements) {
+    const id = e.id.toUpperCase();
+    const prev = merged.get(id);
+    const maxLength = e.max_length ?? prev?.maxLength ?? Math.max(e.text.length, 1);
+    if (e.text.length > maxLength) throw new ToolError("INPUT", `El texto ${id} mide ${e.text.length} y su máximo es ${maxLength}.`);
+    merged.set(id, { ...prev, id, text: e.text, maxLength });
+  }
+  return { current, merged };
+}
 
 const read = defineTool({
   name: "text_elements",
@@ -45,20 +61,32 @@ const write = defineTool({
     elements: z.array(z.object({ id: z.string().min(1).max(8), text: z.string(), max_length: z.number().int().min(1).max(255).optional() })).min(1),
     transport: z.string().optional(),
   },
+  async preview({ object_name, object_type, category, elements, transport }, { sap }) {
+    const requested = transport ? assertTrkorr(transport) : undefined;
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    const { current, merged } = await mergeTexts(c, obj, category, elements);
+    const before = new Map(current.map((t) => [t.id.toUpperCase(), t]));
+    const lines = elements.map((e) => {
+      const id = e.id.toUpperCase();
+      const prev = before.get(id);
+      const now = merged.get(id)!;
+      if (!prev) return `  + ${id}  «${now.text}»  [máx ${now.maxLength}]`;
+      if (prev.text === now.text && prev.maxLength === now.maxLength) return `  = ${id}  sin cambio`;
+      return `  ~ ${id}  «${prev.text}» → «${now.text}»  [máx ${now.maxLength}]`;
+    });
+    return [
+      `${obj.name} (${obj.type}) · ${category} · orden ${requested ?? "ninguna indicada"}`,
+      `Quedarán ${merged.size} (hoy ${current.length}); no se borra ninguno.`,
+      ...lines,
+    ].join("\n");
+  },
   async run({ object_name, object_type, category, elements, transport }, { sap }) {
     const requested = transport ? assertTrkorr(transport) : undefined;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
     const url = textElementsUrl(obj.type, obj.name);
-    const current = (await c.getTextElements(url, category)).textElements;
-    const merged = new Map<string, TextElement>(current.map((t) => [t.id.toUpperCase(), t]));
-    for (const e of elements) {
-      const id = e.id.toUpperCase();
-      const prev = merged.get(id);
-      const maxLength = e.max_length ?? prev?.maxLength ?? Math.max(e.text.length, 1);
-      if (e.text.length > maxLength) throw new ToolError("INPUT", `El texto ${id} mide ${e.text.length} y su máximo es ${maxLength}.`);
-      merged.set(id, { ...prev, id, text: e.text, maxLength });
-    }
+    const { merged } = await mergeTexts(c, obj, category, elements);
     const res = await sap.stateful(async (s) => {
       const lock = await s.lock(obj.uri);
       try {

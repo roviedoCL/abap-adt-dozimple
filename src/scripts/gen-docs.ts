@@ -64,6 +64,7 @@ function toolSection(d: ToolDef<any>, credits: Array<keyof typeof CREDITS>): str
 
   const params = Object.entries(d.input as Record<string, ZodTypeAny>).map(([k, t]) => ({ k, ...describeParam(t) }));
   if (d.access !== "local") params.unshift({ k: "system", type: "string", def: undefined, desc: "Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto.", optional: true });
+  if (d.access === "write") params.push({ k: "confirm_token", type: "string", def: undefined, desc: "Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min).", optional: true });
   if (params.length) {
     out.push("| Parámetro | Tipo | Por defecto | Descripción |", "|---|---|---|---|");
     for (const p of params) out.push(`| \`${p.k}\`${p.optional ? "" : " *"} | ${p.type} | ${p.def ?? ""} | ${p.desc} |`);
@@ -112,7 +113,11 @@ console.error(`docs/TOOLS.md: ${total} tools, ${GROUPS.length} grupos`);
 
 // ── README: bloques generados entre marcadores ────────────────────────────
 const ACCESS_SHORT: Record<string, string> = { read: "lectura", exec: "ejecuta (DEV)", write: "escribe (DEV autorizado)", local: "local" };
-const firstSentence = (s: string) => (s.replace(/\n+/g, " ").match(/^.*?[.!?](\s|$)/)?.[0] ?? s).trim();
+/** Primera frase: termina en punto seguido de mayúscula o fin (no corta «p. ej.»). */
+const firstSentence = (s: string) => {
+  const t = s.replace(/\n+/g, " ").replace(/\b(p\. ej|e\.g|i\.e)\./g, "$1\u0000"); // abreviaturas: no terminan frase
+  return (t.match(/^.*?[.!?](?=\s+[A-ZÁÉÍÓÚÑ¿¡«`]|\s*$)/)?.[0] ?? t).replace(/\u0000/g, ".").trim();
+};
 
 const groupsBlock = [
   "| Grupo | Para qué | Tools |",

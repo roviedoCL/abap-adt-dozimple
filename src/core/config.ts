@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
@@ -27,6 +27,14 @@ const SystemSchema = z.object({
   caFile: z.string().optional(),
   /** Último recurso: desactiva la verificación TLS. Preferir caFile. */
   allowSelfSigned: z.boolean().default(false),
+  /**
+   * Qué datos hay en el sistema: test (ficticios), masked (anonimizados) o
+   * prod (reales). Por defecto DEV = test y QAS/PRD = prod. En masked y prod
+   * se ocultan columnas personales y se limita el número de filas.
+   */
+  dataClass: z.enum(["test", "masked", "prod"]).optional(),
+  /** Tope de filas por consulta; por defecto test 5000, masked 1000, prod 200. */
+  maxRows: z.number().int().min(1).max(5000).optional(),
   password: z
     .string()
     .regex(/^(keychain|env:[A-Z0-9_]+)$/, 'password: "keychain" o "env:NOMBRE_VARIABLE"')
@@ -83,7 +91,23 @@ export function loadConfig(path = configPath()): Config {
         `Copia config/systems.example.json ahí (o define ABAP_DZ_CONFIG).`,
     );
   }
+  assertPrivateFile(path);
   return parseConfig(JSON.parse(readFileSync(path, "utf8")));
+}
+
+/**
+ * Quien pueda escribir systems.json decide a qué sistema se conecta el
+ * servidor y si puede escribir en él: tiene que ser solo del usuario.
+ */
+export function assertPrivateFile(path: string, st: { mode: number; uid: number } = statSync(path)): void {
+  if (process.platform === "win32") return;
+  if (st.mode & 0o022) {
+    throw new Error(`${path} lo pueden modificar otros usuarios (permisos ${(st.mode & 0o777).toString(8)}). Corrígelo con: chmod 600 "${path}"`);
+  }
+  const uid = process.getuid?.();
+  if (uid !== undefined && st.uid !== uid) {
+    throw new Error(`${path} pertenece a otro usuario (uid ${st.uid}). Debe ser tuyo y con permisos 600.`);
+  }
 }
 
 /** Escritura efectiva: hace falta allowWrite y ser un sistema de desarrollo. */
@@ -91,7 +115,7 @@ export function canWrite(s: SystemConfig): boolean {
   return s.allowWrite && s.role === "DEV";
 }
 
-export type SystemSource = "parámetro" | "por defecto" | "único configurado";
+export type SystemSource = "parámetro" | "por defecto" | "por defecto: ABAP_DZ_DEFAULT_SYSTEM" | "único configurado";
 
 /**
  * Qué sistema usar, y por qué. Prioridad: el parámetro de la tool, luego
@@ -112,9 +136,15 @@ export function resolveSystem(
     }
     return { system: s, source: "parámetro" };
   }
-  const def = process.env.ABAP_DZ_DEFAULT_SYSTEM || cfg.defaultSystem;
-  if (def) {
-    const s = find(def);
+  const fromEnv = process.env.ABAP_DZ_DEFAULT_SYSTEM;
+  if (fromEnv) {
+    const s = find(fromEnv);
+    // Una variable de entorno que apunta a un sistema que no existe es un error, no un «siguiente candidato».
+    if (!s) throw new Error(`ABAP_DZ_DEFAULT_SYSTEM="${fromEnv}" no está configurado. Disponibles: ${cfg.systems.map((x) => x.id).join(", ")}`);
+    return { system: s, source: "por defecto: ABAP_DZ_DEFAULT_SYSTEM" };
+  }
+  if (cfg.defaultSystem) {
+    const s = find(cfg.defaultSystem);
     if (s) return { system: s, source: "por defecto" };
   }
   if (cfg.systems.length === 1) return { system: cfg.systems[0], source: "único configurado" };

@@ -14,6 +14,11 @@ export default defineTool({
     object_name: z.string().min(1),
     object_type: z.string().optional().describe(TYPE_HELP),
   },
+  async preview({ object_name, object_type }, { sap }) {
+    const c = await sap.adt();
+    const obj = await resolveObject(c, object_name, object_type);
+    return `Se activará ${obj.name} (${obj.type}) · paquete ${obj.packageName ?? "?"}.\nLa versión inactiva pasa a ser la activa: quien ejecute el objeto usará el código nuevo.`;
+  },
   async run({ object_name, object_type }, { sap }) {
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
