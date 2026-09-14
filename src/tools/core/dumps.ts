@@ -1,16 +1,12 @@
 import { z } from "zod";
 import type { Dump } from "abap-adt-api";
 import { ToolError } from "../../core/errors.js";
+import { decodeEntities, htmlToText } from "../../core/feeds.js";
 import { budget } from "../../core/output.js";
 import { defineTool } from "../../core/tool.js";
 
-const decode = (s: string) =>
-  s.replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-const stripHtml = (html: string) =>
-  decode(html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|tr|h\d)>/gi, "\n").replace(/<[^>]+>/g, " "))
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n\s+/g, "\n")
-    .trim();
+const decode = decodeEntities;
+const stripHtml = htmlToText;
 
 /** Campo de la tabla «Header Information» del resumen HTML del dump. */
 function headerField(d: Dump, label: string): string | undefined {
@@ -55,8 +51,7 @@ export default defineTool({
       if (!self) return budget(stripHtml(d.text));
       // El recurso ofrece HTML (dump completo) o un XML índice; text/plain da 406.
       const r = await c.httpClient.request(self, { headers: { Accept: "text/html" } });
-      const body = String(r.body).replace(/<(script|style)[\s\S]*?<\/\1>/gi, "");
-      return budget(`${summary(d, detail)}\n\n${stripHtml(body)}`, undefined, "El dump completo está en ST22.");
+      return budget(`${summary(d, detail)}\n\n${stripHtml(String(r.body))}`, undefined, "El dump completo está en ST22.");
     }
     const shown = list.slice(0, max);
     return (

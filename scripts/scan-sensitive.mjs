@@ -14,7 +14,7 @@
  *   node scripts/scan-sensitive.mjs --staged   → solo lo que va en el commit
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -79,8 +79,20 @@ try {
 
 const findings = [];
 for (const f of files) {
-  if (!existsSync(f) || statSync(f).size > 2_000_000 || /(^|\/)package-lock\.json$|\.(png|jpg|gif|ico|pdf|zip)$/i.test(f)) continue;
-  const content = readFileSync(f, "utf8");
+  if (/(^|\/)package-lock\.json$|\.(png|jpg|gif|ico|pdf|zip)$/i.test(f)) continue;
+  // Abrir una vez y usar ese descriptor para tamaño y lectura (sin carrera entre comprobar y leer).
+  let content;
+  try {
+    const fd = openSync(f, "r");
+    try {
+      if (fstatSync(fd).size > 2_000_000) continue;
+      content = readFileSync(fd, "utf8");
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    continue; // borrado entre el listado de git y la lectura
+  }
   content.split("\n").forEach((line, i) => {
     for (const r of rules) {
       const m = r.re.exec(line);
