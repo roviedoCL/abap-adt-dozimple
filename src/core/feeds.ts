@@ -56,8 +56,12 @@ export function parseAtom(xml: string): AtomEntry[] {
 }
 
 export function htmlToText(html: string): string {
-  const withBreaks = html
-    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "")
+  let noScripts = html;
+  for (let prev = ""; prev !== noScripts; ) {
+    prev = noScripts;
+    noScripts = noScripts.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "");
+  }
+  const withBreaks = noScripts
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|h\d|li|tr|table)>/gi, "\n")
     .replace(/<\/t[dh]>/gi, "\t");

@@ -18,5 +18,6 @@ describe("limpieza de HTML de SAP", () => {
     expect(t).toMatch(/K\s*\tV|K\s+V/);
     expect(t).not.toMatch(/evil|x\{\}/);
     expect(t.endsWith("&lt;")).toBe(true);
+    expect(htmlToText("a<scr<script>x</script>ipt>alert(1)</script>b")).not.toMatch(/<\s*script|alert/i);
   });
 });
