@@ -33,6 +33,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   divulgación coordinada a 90 días.
 
 ### Corregido
+- Documentación de hallazgos ATC y correcciones de SAP: las entidades HTML se decodificaban con `&amp;` antes que el
+  resto, así que un texto como `&amp;#39;` terminaba en `'` (doble desescape). Ahora hay un único limpiador de HTML
+  (`core/feeds.ts`) que decodifica una sola vez y quita etiquetas hasta que no queda ninguna. Detectado por CodeQL.
+- `edit_preflight`: el nombre del objeto se insertaba en la expresión regular que busca bloqueos del CTS escapando
+  solo `/` y `$`; ahora se escapan todos los metacaracteres. Detectado por CodeQL.
 - La comprobación de vistas y CDS bloqueaba CDS estándar legítimas como `I_USER`: los valores de sus anotaciones
   (`#CDS_MODELING_ASSOCIATION_TARGET`, 31 caracteres) se enviaban como nombres de vista a DD26S, cuyo campo es
   C(30). Detectado al probar contra un sistema real, no en fixtures; cubierto por test de regresión.
@@ -42,6 +47,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   smoke test no aborta ante una llamada lenta.
 
 ### Cambiado
+- Paquete npm `@dozimple/abap-adt` (antes `abap-adt-dozimple`, privado): solo `dist`, documentación, licencias,
+  ejemplo de configuración y `set-password.sh`; la versión que anuncia el servidor sale de `package.json`.
 - Licencia: Apache-2.0 (antes, todos los derechos reservados). El componente SAP de DoZimple Transport Risk sigue
   siendo propietario y no forma parte del repositorio.
 - README principal en inglés, con versión en español en `README.es.md`.

@@ -44,6 +44,7 @@ and **a failure is never presented as an empty result or as success**.
 | Systems | One per instance, no roles | Every system in the landscape, with a policy per role: DEV / QAS / PRD |
 | Writes | Saves wherever SAP decides, or cannot write at all | Development only, explicit transport, preview and human confirmation; stops on another transport's CTS lock |
 | Verification | abaplint or nothing | SAP's real syntax check, also on code not saved yet |
+| Parameters | A misspelled parameter is silently ignored and the call runs anyway | **Unknown parameters are rejected with the list of accepted ones**: a misspelled `transprot` never runs without the transport you meant |
 | Results on failure | Empty lists or misleading “OK” | Typed error saying what could not be checked and why |
 | Releases | Hard-coded endpoints | Capabilities read from each system's ADT discovery |
 | IDE | Often requires the IDE open | Standalone server, no IDE |
@@ -259,6 +260,7 @@ Designed to pass a Security and Basis review without exceptions. Details: **[SEC
 - **No network surface:** stdio only; no ports are opened.
 - **Credentials in the OS keychain** (macOS Keychain or Linux Secret Service), never in files, logs or responses.
 - **Policy per role:** QA and production are never written; development only with explicit authorization.
+- **Strict parameters:** an unknown or misspelled parameter is an error listing the accepted ones, never silently ignored.
 - **No write without human confirmation:** a preview with SAP's syntax check and the real diff, confirmed through MCP
   elicitation or a single-use token bound to those exact arguments.
 - **Hash-chained audit log** of every write and execution, fail-closed (no log, no write), verifiable with

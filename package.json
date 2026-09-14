@@ -1,14 +1,45 @@
 {
-  "name": "abap-adt-dozimple",
-  "version": "0.2.0",
-  "description": "MCP de DoZimple para SAP ABAP: multi-sistema, seguro por diseño, revisión de código, ATC, diagnóstico y documentación",
-  "private": true,
+  "name": "@dozimple/abap-adt",
+  "version": "1.0.0-rc.1",
+  "description": "DoZimple MCP server for SAP ABAP: multi-system, secure by design — code review, ATC, diagnosis and documentation for ECC and S/4HANA",
+  "keywords": [
+    "sap",
+    "abap",
+    "adt",
+    "mcp",
+    "model-context-protocol",
+    "dozimple"
+  ],
+  "homepage": "https://dozimple.cl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roviedoCL/abap-adt-dozimple.git"
+  },
+  "bugs": {
+    "url": "https://github.com/roviedoCL/abap-adt-dozimple/issues"
+  },
   "type": "module",
   "bin": {
     "abap-adt-dozimple": "dist/index.js"
   },
+  "files": [
+    "dist/**/*.js",
+    "!dist/scripts/gen-docs.js",
+    "config/systems.example.json",
+    "scripts/set-password.sh",
+    "docs/TOOLS.md",
+    "docs/THREAT_MODEL.md",
+    "README.es.md",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
     "test": "vitest run",
     "smoke": "node dist/scripts/smoke.js",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
@@ -33,14 +64,5 @@
     "vitest": "5.0.0"
   },
   "license": "Apache-2.0",
-  "author": "DoZimple (https://dozimple.cl)",
-  "homepage": "https://dozimple.cl",
-  "keywords": [
-    "sap",
-    "abap",
-    "adt",
-    "mcp",
-    "model-context-protocol",
-    "dozimple"
-  ]
+  "author": "DoZimple (https://dozimple.cl)"
 }

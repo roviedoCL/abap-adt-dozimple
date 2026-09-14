@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { configPath, loadConfig } from "./core/config.js";
@@ -13,8 +14,17 @@ import { SidecarPool } from "./core/sidecar.js";
 const log = (...a: unknown[]) => console.error("[abap-adt-doZimple]", ...a);
 const here = dirname(fileURLToPath(import.meta.url));
 
+/** Versión única: la de package.json (dist/index.js → ../package.json, también dentro del paquete npm). */
+function packageVersion(): string {
+  try {
+    return JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")).version;
+  } catch {
+    return "0.0.0";
+  }
+}
+
 async function main() {
-  const server = new McpServer({ name: "abap-adt-doZimple", version: "0.2.0" });
+  const server = new McpServer({ name: "abap-adt-doZimple", version: packageVersion() });
 
   let config;
   try {
