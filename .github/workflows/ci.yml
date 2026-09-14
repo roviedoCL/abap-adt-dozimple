@@ -39,4 +39,4 @@ jobs:
       - name: Escáner de secretos (patrones genéricos; los términos de clientes solo existen en local)
         run: node scripts/scan-sensitive.mjs
       - name: La documentación generada está al día
-        run: node dist/scripts/gen-docs.js && git diff --exit-code -- README.md docs/TOOLS.md
+        run: node dist/scripts/gen-docs.js && git diff --exit-code -- README.md README.es.md docs/TOOLS.md

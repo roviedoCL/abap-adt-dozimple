@@ -19,3 +19,14 @@ describe("catálogo funcional", () => {
     }
   });
 });
+
+describe("README en inglés", () => {
+  it("todo grupo, tool y flujo guiado tiene su texto en inglés, y no sobra ninguno", async () => {
+    const { GROUPS_EN, PROMPTS_EN, TOOLS_EN } = await import("../src/core/catalog.en.js");
+    const { PROMPT_META } = await import("../src/core/prompts.js");
+    expect(Object.keys(GROUPS_EN).sort()).toEqual(GROUPS.map((g) => g.id).sort());
+    expect(Object.keys(TOOLS_EN).sort()).toEqual(GROUPS.flatMap((g) => g.tools.map((t) => t.name)).sort());
+    expect(Object.keys(PROMPTS_EN).sort()).toEqual(Object.keys(PROMPT_META).sort());
+    for (const [name, text] of Object.entries(TOOLS_EN)) expect(text, name).toMatch(/^\*\*.+\*\* .{20,}/);
+  });
+});
