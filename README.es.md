@@ -300,7 +300,7 @@ Grupo **Documentación SAP** (opcional): instala [mcp-sap-docs](https://github.c
 (Apache-2.0, variante `abap`) en una carpeta aparte y declara su arranque en `sidecars.docs` de `systems.json` (ver
 `config/systems.example.json`). Corre como proceso aislado; la búsqueda online queda apagada salvo `allowOnline`.
 
-Para contribuir o extender: `git config core.hooksPath .githooks` (escáner de secretos y datos de clientes antes de
+Ver [CONTRIBUTING.md](CONTRIBUTING.md). Para contribuir o extender: `git config core.hooksPath .githooks` (escáner de secretos y datos de clientes antes de
 cada commit) y la guía [`nueva-tool`](.claude/skills/nueva-tool/SKILL.md) — añadir una tool es añadir un archivo.
 
 ## Créditos
