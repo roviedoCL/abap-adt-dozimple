@@ -77,6 +77,16 @@ try {
   process.exit(2);
 }
 
+// La URL pública del propio repositorio (remoto origin) no es un dato sensible: se ignora solo esa cadena exacta
+// (la necesitan package.json para la procedencia de npm y los enlaces). El handle en cualquier otro contexto sigue bloqueado.
+let ownRepoUrl = "";
+try {
+  const origin = execFileSync("git", ["remote", "get-url", "origin"], { encoding: "utf8" }).trim();
+  const m = /github\.com[:/]([^/]+\/[^/.\s]+)/.exec(origin);
+  if (m) ownRepoUrl = `github.com/${m[1]}`;
+} catch {}
+const stripOwn = (s) => (ownRepoUrl ? s.split(ownRepoUrl).join("github.com/<repo>") : s);
+
 const findings = [];
 for (const f of files) {
   if (/(^|\/)package-lock\.json$|\.(png|jpg|gif|ico|pdf|zip)$/i.test(f)) continue;
@@ -86,7 +96,7 @@ for (const f of files) {
     const fd = openSync(f, "r");
     try {
       if (fstatSync(fd).size > 2_000_000) continue;
-      content = readFileSync(fd, "utf8");
+      content = stripOwn(readFileSync(fd, "utf8"));
     } finally {
       closeSync(fd);
     }

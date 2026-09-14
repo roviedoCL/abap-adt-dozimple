@@ -44,6 +44,7 @@ El agente elige las tools, las encadena y responde con evidencia. Cada respuesta
 | Sistemas | Uno por instancia, sin roles | Todos los de la organización, con política por rol: DEV / QAS / PRD |
 | Escritura | Guarda donde SAP decida, o no permite escribir | Solo en desarrollo, con orden explícita, vista previa y confirmación humana; se detiene ante un bloqueo CTS ajeno |
 | Verificación | abaplint o nada | Sintaxis real de SAP, también sobre código aún no guardado |
+| Parámetros | Un parámetro mal escrito se ignora en silencio y la llamada sigue | **Los parámetros desconocidos se rechazan con la lista de los admitidos**: un `transprot` mal escrito nunca se ejecuta sin la orden que querías |
 | Resultados ante un fallo | Listas vacías o «OK» engañosos | Error tipado que dice qué no se pudo comprobar y por qué |
 | Releases | Endpoints fijos | Capacidades leídas del discovery ADT de cada sistema |
 | IDE | Suele exigir el IDE abierto | Servidor independiente, sin IDE |
@@ -258,6 +259,7 @@ Diseñado para poder presentarse ante Seguridad y Basis sin excepciones. Detalle
 - **Sin superficie de red:** solo stdio; no abre puertos.
 - **Credenciales en el llavero del sistema operativo,** nunca en archivos, logs ni respuestas.
 - **Política por rol:** calidad y productivo nunca se escriben; en desarrollo, solo con autorización explícita.
+- **Parámetros estrictos:** un parámetro desconocido o mal escrito es un error con la lista de los admitidos, nunca se ignora en silencio.
 - **Ninguna escritura sin confirmación humana:** vista previa con la sintaxis de SAP y el diff real, y confirmación
   por elicitación o con un token de un solo uso atado a esos argumentos exactos.
 - **Registro de auditoría encadenado por hash** de toda escritura y ejecución, verificable con `npm run audit:verify`.
