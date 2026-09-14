@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ZodTypeAny } from "zod";
 import { CORE_CREDITS, CREDITS, GROUPS } from "../core/catalog.js";
+import { GROUPS_EN, KIND_EN, PROMPTS_EN, TOOLS_EN, toEn } from "../core/catalog.en.js";
 import { PROMPT_META } from "../core/prompts.js";
 import { loadTools } from "../core/registry.js";
 import type { ToolDef } from "../core/tool.js";
@@ -111,72 +112,96 @@ mkdirSync(join(root, "docs"), { recursive: true });
 writeFileSync(join(root, "docs", "TOOLS.md"), md.join("\n"));
 console.error(`docs/TOOLS.md: ${total} tools, ${GROUPS.length} grupos`);
 
-// ── README: bloques generados entre marcadores ────────────────────────────
-const ACCESS_SHORT: Record<string, string> = { read: "lectura", exec: "ejecuta (DEV)", write: "escribe (DEV autorizado)", local: "local" };
+// ── README: bloques generados entre marcadores, en español e inglés ─────────
+type Lang = "es" | "en";
+const ACCESS_SHORT: Record<Lang, Record<string, string>> = {
+  es: { read: "lectura", exec: "ejecuta (DEV)", write: "escribe (DEV autorizado)", local: "local" },
+  en: { read: "read", exec: "executes (DEV)", write: "writes (authorized DEV)", local: "local" },
+};
 /** Primera frase: termina en punto seguido de mayúscula o fin (no corta «p. ej.»). */
 const firstSentence = (s: string) => {
   const t = s.replace(/\n+/g, " ").replace(/\b(p\. ej|e\.g|i\.e)\./g, "$1\u0000"); // abreviaturas: no terminan frase
   return (t.match(/^.*?[.!?](?=\s+[A-ZÁÉÍÓÚÑ¿¡«`]|\s*$)/)?.[0] ?? t).replace(/\u0000/g, ".").trim();
 };
 
-const groupsBlock = [
-  "| Grupo | Para qué | Tools |",
-  "|---|---|---|",
-  ...GROUPS.map((g) => `| [${g.title}](#g-${g.id}) | ${g.pitch} | ${g.tools.length} |`),
-].join("\n");
+function readmeBlocks(lang: Lang): Record<string, string> {
+  const en = lang === "en";
+  const gTitle = (g: (typeof GROUPS)[number]) => (en ? GROUPS_EN[g.id].title : g.title);
+  const gPitch = (g: (typeof GROUPS)[number]) => (en ? GROUPS_EN[g.id].pitch : g.pitch);
+  const esc = (x: string) => x.replace(/\|/g, "\\|");
 
-const toolsBlock = GROUPS.map((g) =>
-  [
-    `<a id="g-${g.id}"></a>`,
-    `### ${g.title}`,
-    "",
-    `*${g.pitch}*`,
-    "",
-    "| Tool | Qué hace | Acceso |",
+  const groups = [
+    en ? "| Group | What for | Tools |" : "| Grupo | Para qué | Tools |",
     "|---|---|---|",
-    ...g.tools.map((t) => {
-      const d = byName.get(t.name)!;
-      return `| [\`${t.name}\`](docs/TOOLS.md#${g.id}) | **${/[.?!]$/.test(d.title) ? d.title : d.title + "."}** ${firstSentence(d.description).replace(/\|/g, "\\|")} | ${ACCESS_SHORT[d.access]} |`;
-    }),
+    ...GROUPS.map((g) => `| [${gTitle(g)}](#g-${g.id}) | ${gPitch(g)} | ${g.tools.length} |`),
+  ].join("\n");
+
+  const tools = GROUPS.map((g) =>
+    [
+      `<a id="g-${g.id}"></a>`,
+      `### ${gTitle(g)}`,
+      "",
+      `*${gPitch(g)}*`,
+      "",
+      en ? "| Tool | What it does | Access |" : "| Tool | Qué hace | Acceso |",
+      "|---|---|---|",
+      ...g.tools.map((t) => {
+        const d = byName.get(t.name)!;
+        const summary = en
+          ? TOOLS_EN[t.name]
+          : `**${/[.?!]$/.test(d.title) ? d.title : d.title + "."}** ${firstSentence(d.description)}`;
+        if (!summary) throw new Error(`Falta el resumen en inglés de ${t.name} (src/core/catalog.en.ts)`);
+        return `| [\`${t.name}\`](docs/TOOLS.md#${g.id}) | ${esc(summary)} | ${ACCESS_SHORT[lang][d.access]} |`;
+      }),
+      "",
+    ].join("\n"),
+  ).join("\n");
+
+  const prompts = [
+    en
+      ? "They show up as commands in the MCP client (in Claude Code: `/mcp__abap-adt-doZimple__<name>`) and chain the tools"
+      : "Aparecen como comandos en el cliente MCP (en Claude Code: `/mcp__abap-adt-doZimple__<nombre>`) y encadenan las tools",
+    en ? "with the working rules of a senior consultant." : "con las reglas de trabajo de un consultor senior.",
     "",
-  ].join("\n"),
-).join("\n");
-
-const promptsBlock = [
-  "Aparecen como comandos en el cliente MCP (en Claude Code: `/mcp__abap-adt-doZimple__<nombre>`) y encadenan las tools",
-  "con las reglas de trabajo de un consultor senior.",
-  "",
-  "| Flujo | Qué hace | Encadena |",
-  "|---|---|---|",
-  ...Object.entries(PROMPT_META).map(([n, p]) => `| \`${n}\` — ${p.title} | ${p.description} | ${p.chain} |`),
-].join("\n");
-
-const usedBy = new Map<string, string[]>();
-for (const g of GROUPS) for (const t of g.tools) for (const c of t.credits) usedBy.set(c, [...(usedBy.get(c) ?? []), t.name]);
-for (const c of CORE_CREDITS) usedBy.set(c, ["todas (núcleo)", ...(usedBy.get(c) ?? []).filter((x) => x !== "todas (núcleo)")]);
-const KIND_ORDER = ["dependencia", "datos", "idea", "algoritmo"] as const;
-const creditsBlock = [
-  "| Proyecto | Autor / titular | Licencia | Tipo | Usado en |",
-  "|---|---|---|---|---|",
-  ...Object.entries(CREDITS)
-    .sort((a, b) => KIND_ORDER.indexOf(a[1].kind) - KIND_ORDER.indexOf(b[1].kind))
-    .map(([k, c]) => {
-      const tools = usedBy.get(k) ?? [];
-      const shown = tools.length > 6 ? `${tools.slice(0, 6).map((t) => (t.includes(" ") ? t : `\`${t}\``)).join(", ")} y ${tools.length - 6} más` : tools.map((t) => (t.includes(" ") ? t : `\`${t}\``)).join(", ");
-      return `| [${c.what}](${c.url}) | ${c.by} | ${c.license} | ${c.kind} | ${shown} |`;
+    en ? "| Flow | What it does | Chain |" : "| Flujo | Qué hace | Encadena |",
+    "|---|---|---|",
+    ...Object.entries(PROMPT_META).map(([n, p]) => {
+      const t = en ? PROMPTS_EN[n] : p;
+      return `| \`${n}\` — ${t.title} | ${t.description} | ${t.chain} |`;
     }),
-].join("\n");
+  ].join("\n");
 
-const readmePath = join(root, "README.md");
-let readme = readFileSync(readmePath, "utf8");
-const put = (name: string, content: string) => {
-  const re = new RegExp(`(<!-- ${name}:start -->)[\\s\\S]*?(<!-- ${name}:end -->)`);
-  if (!re.test(readme)) throw new Error(`README sin marcadores ${name}`);
-  readme = readme.replace(re, `$1\n${content}\n$2`);
-};
-put("groups", groupsBlock);
-put("tools", toolsBlock);
-put("prompts", promptsBlock);
-put("credits", creditsBlock);
-writeFileSync(readmePath, readme);
-console.error("README.md: bloques generados actualizados");
+  const core = en ? "all (core)" : "todas (núcleo)";
+  const usedBy = new Map<string, string[]>();
+  for (const g of GROUPS) for (const t of g.tools) for (const c of t.credits) usedBy.set(c, [...(usedBy.get(c) ?? []), t.name]);
+  for (const c of CORE_CREDITS) usedBy.set(c, [core, ...(usedBy.get(c) ?? [])]);
+  const KIND_ORDER = ["dependencia", "datos", "idea", "algoritmo"] as const;
+  const credits = [
+    en ? "| Project | Author / holder | License | Type | Used in |" : "| Proyecto | Autor / titular | Licencia | Tipo | Usado en |",
+    "|---|---|---|---|---|",
+    ...Object.entries(CREDITS)
+      .sort((a, b) => KIND_ORDER.indexOf(a[1].kind) - KIND_ORDER.indexOf(b[1].kind))
+      .map(([k, c]) => {
+        const list = (usedBy.get(k) ?? []).map((t) => (t === core ? t : `\`${t}\``));
+        const more = en ? "more" : "más";
+        const and = en ? "and" : "y";
+        const shown = list.length > 6 ? `${list.slice(0, 6).join(", ")} ${and} ${list.length - 6} ${more}` : list.join(", ");
+        const tr = en ? toEn : (x: string) => x;
+        return `| [${c.what}](${c.url}) | ${tr(c.by)} | ${tr(c.license)} | ${en ? KIND_EN[c.kind] : c.kind} | ${shown} |`;
+      }),
+  ].join("\n");
+
+  return { groups, tools, prompts, credits };
+}
+
+for (const [file, lang] of [["README.md", "en"], ["README.es.md", "es"]] as const) {
+  const path = join(root, file);
+  let readme = readFileSync(path, "utf8");
+  for (const [name, content] of Object.entries(readmeBlocks(lang))) {
+    const re = new RegExp(`(<!-- ${name}:start -->)[\\s\\S]*?(<!-- ${name}:end -->)`);
+    if (!re.test(readme)) throw new Error(`${file} sin marcadores ${name}`);
+    readme = readme.replace(re, `$1\n${content}\n$2`);
+  }
+  writeFileSync(path, readme);
+  console.error(`${file}: bloques generados actualizados`);
+}

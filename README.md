@@ -2,349 +2,351 @@
 
 # abap-adt-doZimple
 
+**English** · [Español](README.es.md)
+
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1) ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
-**IA que trabaja en tu SAP con las reglas de un consultor senior.**
+**AI that works on your SAP system with the rules of a senior consultant.**
 
-Servidor [MCP](https://modelcontextprotocol.io) de **[DoZimple](https://dozimple.cl)** que da a los agentes de IA —
-Claude Code, Kiro o cualquier cliente MCP — acceso seguro y verificable a sistemas SAP ABAP:
-revisar código y órdenes de transporte, ejecutar ATC y ABAP Unit, diagnosticar incidentes, consultar la
-documentación oficial y, donde se autorice, guardar cambios en la orden correcta.
+An [MCP](https://modelcontextprotocol.io) server by **[DoZimple](https://dozimple.cl)** that gives AI agents —
+Claude Code, Kiro or any MCP client — secure, verifiable access to SAP ABAP systems: review code and transport
+requests, run ATC and ABAP Unit, diagnose incidents, query the official documentation and, where authorized, save
+changes in the right transport after a human confirms them.
 
-**45 tools · 9 grupos funcionales · 3 flujos guiados · ECC 6.0 (NW 7.50) y S/4HANA**
+**45 tools · 9 functional groups · 3 guided flows · ECC 6.0 (NW 7.50) and S/4HANA**
 
-[Funcionalidades](#funcionalidades-por-grupo) · [Referencia completa de tools](docs/TOOLS.md) ·
-[Seguridad](SECURITY.md) · [DoZimple Transport Risk](#dozimple-transport-risk) · [Créditos](#créditos) · [Contacto](https://dozimple.cl)
+[Features](#features-by-group) · [Full tool reference](docs/TOOLS.md) ·
+[Security](SECURITY.md) · [Threat model](docs/THREAT_MODEL.md) · [DoZimple Transport Risk](#dozimple-transport-risk) · [Credits](#credits) · [Contact](https://dozimple.cl)
 
 </div>
 
 ---
 
-## Qué le puedes pedir
+## What you can ask
 
-> «¿Qué cambia de verdad la orden DEVK900123 y qué objetos suelen viajar con ella que no van dentro?»
+> “What does transport DEVK900123 really change, and which objects usually travel with it but are missing?”
 >
-> «Pasa el ATC a ZDEMO_REPORTE, explícame los hallazgos P1 con su nota SAP y propón la corrección que ofrece SAP.»
+> “Run ATC on ZDEMO_REPORT, explain the P1 findings with their SAP note and propose the fix SAP offers.”
 >
-> «¿Se puede usar `COND` en este sistema 7.50? Si no, reescribe el método con sintaxis compatible y valídalo contra SAP.»
+> “Can I use `COND` on this 7.50 system? If not, rewrite the method with compatible syntax and validate it against SAP.”
 >
-> «El job de facturación de anoche falló: dumps, log del job y log de aplicación, y dime la causa probable.»
+> “Last night's billing job failed: dumps, job log and application log, and tell me the probable cause.”
 >
-> «¿Este pase de cuatro órdenes está listo para productivo? Dímelo en lenguaje de negocio para el PMO.»
+> “Is this release of four transports ready for production? Explain it in business terms for the PMO.”
 
-El agente elige las tools, las encadena y responde con evidencia. Cada respuesta indica de qué sistema viene, y
-**un fallo nunca se presenta como resultado vacío o como éxito**.
+The agent picks the tools, chains them and answers with evidence. Every answer states which system it comes from,
+and **a failure is never presented as an empty result or as success**.
 
-## Por qué es distinto
+## Why it is different
 
-| | Enfoque habitual | **abap-adt-doZimple** |
+| | Usual approach | **abap-adt-doZimple** |
 |---|---|---|
-| Sistemas | Uno por instancia, sin roles | Todos los de la organización, con política por rol: DEV / QAS / PRD |
-| Escritura | Guarda donde SAP decida, o no permite escribir | Solo en desarrollo, con orden explícita, vista previa y confirmación humana; se detiene ante un bloqueo CTS ajeno |
-| Verificación | abaplint o nada | Sintaxis real de SAP, también sobre código aún no guardado |
-| Resultados ante un fallo | Listas vacías o «OK» engañosos | Error tipado que dice qué no se pudo comprobar y por qué |
-| Releases | Endpoints fijos | Capacidades leídas del discovery ADT de cada sistema |
-| IDE | Suele exigir el IDE abierto | Servidor independiente, sin IDE |
-| Terceros | Dependencias mezcladas con las credenciales | Componentes aislados en su propio proceso y filtrados |
+| Systems | One per instance, no roles | Every system in the landscape, with a policy per role: DEV / QAS / PRD |
+| Writes | Saves wherever SAP decides, or cannot write at all | Development only, explicit transport, preview and human confirmation; stops on another transport's CTS lock |
+| Verification | abaplint or nothing | SAP's real syntax check, also on code not saved yet |
+| Results on failure | Empty lists or misleading “OK” | Typed error saying what could not be checked and why |
+| Releases | Hard-coded endpoints | Capabilities read from each system's ADT discovery |
+| IDE | Often requires the IDE open | Standalone server, no IDE |
+| Third parties | Dependencies mixed with credentials | Components isolated in their own process and filtered |
+| Data | Whatever the SAP user can read goes to the model | Security and HR tables blocked (also through views and CDS); personal data masked on production-data systems |
 
-## Visión general
+## Overview
 
 <!-- groups:start -->
-| Grupo | Para qué | Tools |
+| Group | What for | Tools |
 |---|---|---|
-| [Revisión de código y pases](#g-revision) | Saber qué cambia de verdad una orden y qué puede romper, antes de liberarla. | 5 |
-| [Calidad, ATC y remediación](#g-calidad) | Encontrar, entender y corregir hallazgos con la sintaxis y las correcciones reales de SAP. | 5 |
-| [Exploración del repositorio](#g-exploracion) | Leer y entender cualquier objeto ABAP y sus relaciones, en ECC y en S/4HANA. | 8 |
-| [Consulta de datos](#g-datos) | Preguntar a las tablas con ABAP SQL, de solo lectura y sin tocar material de credenciales. | 2 |
-| [Diagnóstico de incidentes](#g-diagnostico) | Reunir en una conversación lo que antes exigía ST22, SM37, SLG1 y /IWFND/ERROR_LOG. | 4 |
-| [Documentación SAP](#g-documentacion) | Responder con la documentación oficial y comprobar qué sintaxis existe en cada release. | 7 |
-| [Escritura controlada](#g-escritura) | Guardar cambios solo en desarrollo, en la orden correcta y con la sintaxis verificada antes. | 4 |
-| [DoZimple Transport Risk](#g-transport-risk) | Decidir si un pase entero puede ir a calidad o productivo, con el porqué en lenguaje de negocio. | 7 |
-| [Operación y crecimiento](#g-operacion) | Ver qué funciona en cada sistema y decidir con datos cuál es la siguiente tool. | 3 |
+| [Code review and transports](#g-revision) | Know what a transport really changes and what it may break, before releasing it. | 5 |
+| [Quality, ATC and remediation](#g-calidad) | Find, understand and fix findings with SAP's real syntax check and quick fixes. | 5 |
+| [Repository exploration](#g-exploracion) | Read and understand any ABAP object and its relations, on ECC and S/4HANA. | 8 |
+| [Data queries](#g-datos) | Query tables with ABAP SQL, read-only, with sensitive and personal data protected. | 2 |
+| [Incident diagnosis](#g-diagnostico) | One conversation for what used to take ST22, SM37, SLG1 and /IWFND/ERROR_LOG. | 4 |
+| [SAP documentation](#g-documentacion) | Answer from official documentation and check which syntax exists in each release. | 7 |
+| [Controlled writes](#g-escritura) | Save changes only in development, in the right transport, previewed and confirmed by a human. | 4 |
+| [DoZimple Transport Risk](#g-transport-risk) | Decide whether a whole release can go to QA or production, with the why in business terms. | 7 |
+| [Operations and growth](#g-operacion) | See what works on each system and decide the next tool with data. | 3 |
 <!-- groups:end -->
 
-## Arquitectura
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Cliente["Cliente MCP (Claude Code, Kiro…)"]
-    A[Agente de IA]
+  subgraph Client["MCP client (Claude Code, Kiro…)"]
+    A[AI agent]
   end
-  subgraph Srv["abap-adt-doZimple (stdio, sin puertos)"]
-    R["Registro y política<br/>sistema · rol · capacidad · módulo"]
-    T["45 tools + 3 flujos"]
-    K[("Llavero del SO")]
-    D["Componente docs<br/>(proceso aislado)"]
+  subgraph Srv["abap-adt-doZimple (stdio, no ports)"]
+    R["Registry and policy<br/>system · role · capability · module<br/>confirmation · audit"]
+    T["45 tools + 3 flows"]
+    K[("OS keychain")]
+    D["Docs component<br/>(isolated process)"]
   end
-  subgraph SAP["Sistemas SAP"]
-    DEV["DEV — lectura y, si se autoriza, escritura"]
-    QAS["QAS / PRD — solo lectura"]
-    TR["DoZimple Transport Risk<br/>(componente SAP)"]
+  subgraph SAP["SAP systems"]
+    DEV["DEV — read and, if authorized, write"]
+    QAS["QAS / PRD — read only"]
+    TR["DoZimple Transport Risk<br/>(SAP component)"]
   end
   A <-->|MCP| R --> T
-  T -->|ADT sobre HTTPS| DEV
-  T -->|ADT sobre HTTPS| QAS
-  T -->|servicio ICF| TR
+  T -->|ADT over HTTPS| DEV
+  T -->|ADT over HTTPS| QAS
+  T -->|ICF service| TR
   T --> D
-  R -.credenciales.-> K
-  D -.consultas filtradas.-> W[(Documentación SAP)]
+  R -.credentials.-> K
+  D -.filtered queries.-> W[(SAP documentation)]
 ```
 
-## Funcionalidades por grupo
+## Features by group
 
-Resumen por grupo; el detalle de cada tool —parámetros, tipos, valores por defecto, requisitos y créditos— está en
-la **[referencia completa](docs/TOOLS.md)**.
+Summary per group; each tool's details — parameters, types, defaults, requirements and credits — are in the
+**[full reference](docs/TOOLS.md)** (in Spanish).
 
 <!-- tools:start -->
 <a id="g-revision"></a>
-### Revisión de código y pases
+### Code review and transports
 
-*Saber qué cambia de verdad una orden y qué puede romper, antes de liberarla.*
+*Know what a transport really changes and what it may break, before releasing it.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`transport_diff`](docs/TOOLS.md#revision) | **Qué cambió una orden (diff de código).** Revisión de código de una orden: por cada objeto con fuente (programas, includes, clases, interfaces, FM, CDS) compara la versión grabada con esa orden (o sus tareas) contra la versión anterior, y muestra el diff unificado. | lectura |
-| [`transport_contents`](docs/TOOLS.md#revision) | **Contenido de una orden.** Cabecera, tareas (con dueño y estado) y objetos de una orden de transporte, leídos de E070/E07T/E071. | lectura |
-| [`co_change`](docs/TOOLS.md#revision) | **¿Con qué suele viajar este objeto?** Mira las órdenes que tocaron un objeto y cuenta qué otros objetos viajaron con él, de más a menos frecuente. | lectura |
-| [`inactive_objects`](docs/TOOLS.md#revision) | **Objetos sin activar.** Objetos con versión inactiva (guardados sin activar) del usuario de la conexión, con su orden. | lectura |
-| [`edit_preflight`](docs/TOOLS.md#revision) | **Antes de editar: ¿a qué orden irá?** Dice, ANTES de modificar un objeto, en qué orden acabará el cambio y por qué: bloqueo del CTS (TLOCK) de otra orden, objeto local ($TMP), reparación (sistema original distinto), o si está libre y qué órdenes tienes abiertas. | lectura |
+| [`transport_diff`](docs/TOOLS.md#revision) | **What a transport changed (code diff).** Code review of a transport: for each source object (programs, includes, classes, interfaces, function modules, CDS) compares the version recorded with that transport against the previous one and shows a unified diff. | read |
+| [`transport_contents`](docs/TOOLS.md#revision) | **Transport contents.** Header, tasks (owner and status) and objects of a transport request, read from E070/E07T/E071. | read |
+| [`co_change`](docs/TOOLS.md#revision) | **What usually travels with this object?** Looks at the transports that touched an object and counts which other objects travelled with it, most frequent first. | read |
+| [`inactive_objects`](docs/TOOLS.md#revision) | **Inactive objects.** Objects saved but not activated by the connection user, with their transport. | read |
+| [`edit_preflight`](docs/TOOLS.md#revision) | **Before editing: which transport will it land in?** Tells, BEFORE changing an object, which transport the change will end up in and why: CTS lock by another transport, local object ($TMP), repair (different original system), or free with your open transports. | read |
 
 <a id="g-calidad"></a>
-### Calidad, ATC y remediación
+### Quality, ATC and remediation
 
-*Encontrar, entender y corregir hallazgos con la sintaxis y las correcciones reales de SAP.*
+*Find, understand and fix findings with SAP's real syntax check and quick fixes.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`run_atc`](docs/TOOLS.md#calidad) | **Ejecutar ATC.** Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos numerados (prioridad, línea, check, mensaje), con los totales P1/P2/P3 que da SAP. | lectura |
-| [`atc_quickfix`](docs/TOOLS.md#calidad) | **Correcciones propuestas por SAP.** Correcciones que SAP ofrece (las mismas de Ctrl+1 en Eclipse) para un hallazgo ATC o una línea: crear símbolo de texto, extraer constante, etc. | lectura |
-| [`api_release_state`](docs/TOOLS.md#calidad) | **¿Está liberada esta API? ¿Cuál es su sucesor?** Estado de liberación de un objeto SAP (clase, FM/BAPI, tabla, CDS…) por contrato C0–C4 y su sucesor liberado, leído del propio sistema. | lectura |
-| [`syntax_check`](docs/TOOLS.md#calidad) | **Chequeo de sintaxis SAP.** Chequeo de sintaxis real de SAP (no abaplint). | lectura |
-| [`run_unit_tests`](docs/TOOLS.md#calidad) | **Ejecutar ABAP Unit.** Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada fallo. | ejecuta (DEV) |
+| [`run_atc`](docs/TOOLS.md#calidad) | **Run ATC.** Runs the ABAP Test Cockpit on an object or a transport and lists numbered findings (priority, line, check, message) with SAP's P1/P2/P3 totals. | read |
+| [`atc_quickfix`](docs/TOOLS.md#calidad) | **SAP-proposed fixes.** The fixes SAP offers (the same as Ctrl+1 in Eclipse) for an ATC finding or a line: create text symbol, extract constant, etc. | read |
+| [`api_release_state`](docs/TOOLS.md#calidad) | **Is this API released? What is its successor?** Release state of an SAP object (class, function module/BAPI, table, CDS…) by contract C0–C4 and its released successor, read from the system itself. | read |
+| [`syntax_check`](docs/TOOLS.md#calidad) | **SAP syntax check.** SAP's real syntax check (not abaplint), also on code not saved yet. | read |
+| [`run_unit_tests`](docs/TOOLS.md#calidad) | **Run ABAP Unit.** Runs the ABAP Unit tests of a class or program (harmless and short only) and returns the result per method, with each failure in detail. | executes (DEV) |
 
 <a id="g-exploracion"></a>
-### Exploración del repositorio
+### Repository exploration
 
-*Leer y entender cualquier objeto ABAP y sus relaciones, en ECC y en S/4HANA.*
+*Read and understand any ABAP object and its relations, on ECC and S/4HANA.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`search_objects`](docs/TOOLS.md#exploracion) | **Buscar objetos ABAP.** Busca objetos del repositorio por nombre (admite * como comodín). | lectura |
-| [`get_source`](docs/TOOLS.md#exploracion) | **Leer fuente ABAP.** Lee la fuente de cualquier objeto: programa, include, clase (y sus includes), interfaz, módulo de función (sin necesidad de saber el grupo), CDS, tabla/estructura, etc. | lectura |
-| [`where_used`](docs/TOOLS.md#exploracion) | **Dónde se usa.** Lista de uso (where-used) de un objeto: quién lo referencia, con paquete y responsable. | lectura |
-| [`object_versions`](docs/TOOLS.md#exploracion) | **Versiones de un objeto.** Historial de versiones de un objeto (fecha, autor, orden). | lectura |
-| [`package_contents`](docs/TOOLS.md#exploracion) | **Contenido de un paquete.** Objetos de un paquete de desarrollo agrupados por tipo, con sus subpaquetes (TADIR/TDEVC, cualquier release). | lectura |
-| [`ddic_type_info`](docs/TOOLS.md#exploracion) | **Elemento de datos, dominio o tipo tabla.** Definición de un tipo DDIC: elemento de datos (dominio, tipo, longitud, textos), dominio (tipo, longitud, valores fijos, tabla de valores) o tipo tabla (tipo de línea, clave). | lectura |
-| [`transaction_info`](docs/TOOLS.md#exploracion) | **Qué ejecuta una transacción.** Programa, dynpro y parámetros de una transacción (TSTC/TSTCP), con su texto. | lectura |
-| [`text_elements`](docs/TOOLS.md#exploracion) | **Símbolos de texto y textos de selección.** Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de un programa, clase o grupo de funciones. | lectura |
+| [`search_objects`](docs/TOOLS.md#exploracion) | **Search ABAP objects.** Searches repository objects by name (supports * wildcards). | read |
+| [`get_source`](docs/TOOLS.md#exploracion) | **Read ABAP source.** Reads the source of any object: program, include, class (and its includes), interface, function module (without knowing its group), CDS, table/structure, etc. | read |
+| [`where_used`](docs/TOOLS.md#exploracion) | **Where used.** Where-used list of an object: who references it, with package and owner. | read |
+| [`object_versions`](docs/TOOLS.md#exploracion) | **Object versions.** Version history of an object (date, author, transport). | read |
+| [`package_contents`](docs/TOOLS.md#exploracion) | **Package contents.** Objects of a development package grouped by type, with subpackages (TADIR/TDEVC, any release). | read |
+| [`ddic_type_info`](docs/TOOLS.md#exploracion) | **Data element, domain or table type.** Definition of a DDIC type: data element (domain, type, length, texts), domain (type, length, fixed values, value table) or table type (line type, key). | read |
+| [`transaction_info`](docs/TOOLS.md#exploracion) | **What a transaction runs.** Program, screen and parameters of a transaction (TSTC/TSTCP), with its text. | read |
+| [`text_elements`](docs/TOOLS.md#exploracion) | **Text symbols and selection texts.** Reads the text symbols (TEXT-001…), selection texts or headings of a program, class or function group. | read |
 
 <a id="g-datos"></a>
-### Consulta de datos
+### Data queries
 
-*Preguntar a las tablas con ABAP SQL, de solo lectura y sin tocar material de credenciales.*
+*Query tables with ABAP SQL, read-only, with sensitive and personal data protected.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`sql_query`](docs/TOOLS.md#datos) | **Consulta ABAP SQL.** Ejecuta un SELECT de ABAP SQL (con WHERE, JOIN, ORDER BY, subconsultas) vía la vista previa de datos de ADT. | lectura |
-| [`table_contents`](docs/TOOLS.md#datos) | **Contenido de una tabla.** Filas de una tabla, vista o CDS, con columnas y filtro opcionales. | lectura |
+| [`sql_query`](docs/TOOLS.md#datos) | **ABAP SQL query.** Runs an ABAP SQL SELECT (WHERE, JOIN, ORDER BY, subqueries) through ADT data preview, with personal columns masked and row caps on production-data systems. | read |
+| [`table_contents`](docs/TOOLS.md#datos) | **Table contents.** Rows of a table, view or CDS, with optional columns and filter. | read |
 
 <a id="g-diagnostico"></a>
-### Diagnóstico de incidentes
+### Incident diagnosis
 
-*Reunir en una conversación lo que antes exigía ST22, SM37, SLG1 y /IWFND/ERROR_LOG.*
+*One conversation for what used to take ST22, SM37, SLG1 and /IWFND/ERROR_LOG.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`dumps`](docs/TOOLS.md#diagnostico) | **Dumps (ST22).** Lista los dumps de ejecución (ST22): fecha, error, programa, usuario y texto corto. | lectura |
-| [`jobs`](docs/TOOLS.md#diagnostico) | **Jobs de fondo (SM37).** Jobs de fondo por nombre (admite *), usuario, estado y fecha, con sus pasos (programa y variante). | lectura |
-| [`application_log`](docs/TOOLS.md#diagnostico) | **Log de aplicación (SLG1), cabeceras.** Cabeceras del log de aplicación (BALHDR) por objeto/subobjeto, nº externo, usuario y fecha, con el recuento de errores y avisos. | lectura |
-| [`gateway_errors`](docs/TOOLS.md#diagnostico) | **Errores de SAP Gateway (/IWFND/ERROR_LOG).** Lista los errores del log de SAP Gateway (servicios OData): servicio, error, usuario, fecha. | lectura |
+| [`dumps`](docs/TOOLS.md#diagnostico) | **Dumps (ST22).** Lists runtime dumps: date, error, program, user and short text. | read |
+| [`jobs`](docs/TOOLS.md#diagnostico) | **Background jobs (SM37).** Background jobs by name (supports *), user, status and date, with their steps (program and variant). | read |
+| [`application_log`](docs/TOOLS.md#diagnostico) | **Application log (SLG1) headers.** Application log headers (BALHDR) by object/subobject, external number, user and date, with error and warning counts. | read |
+| [`gateway_errors`](docs/TOOLS.md#diagnostico) | **SAP Gateway errors (/IWFND/ERROR_LOG).** Lists SAP Gateway (OData) errors: service, error, user, date. | read |
 
 <a id="g-documentacion"></a>
-### Documentación SAP
+### SAP documentation
 
-*Responder con la documentación oficial y comprobar qué sintaxis existe en cada release.*
+*Answer from official documentation and check which syntax exists in each release.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`abap_feature_matrix`](docs/TOOLS.md#documentacion) | **¿Desde qué release existe esta sintaxis?** Disponibilidad de cada característica del lenguaje ABAP por release (7.40 … 7.58, 2025). | local |
-| [`docs_search`](docs/TOOLS.md#documentacion) | **Buscar en la documentación ABAP.** Busca en la documentación oficial ABAP (keyword docs estándar y cloud), Clean ABAP, guía DSAG, ABAP cheat sheets y ejemplos RAP, en local. | local |
-| [`docs_fetch`](docs/TOOLS.md#documentacion) | **Leer un documento de la documentación.** Devuelve el contenido completo de un documento por su id (el que da docs_search). | local |
-| [`clean_core_objects`](docs/TOOLS.md#documentacion) | **Catálogo de objetos liberados (Clean Core).** Busca en el catálogo público de SAP (abap-atc-cr-cv-s4hc, local) objetos liberados/obsoletos por nombre o tema, con nivel Clean Core (A liberado … D todo) y sucesores. | local |
-| [`clean_core_object`](docs/TOOLS.md#documentacion) | **Estado Clean Core de un objeto SAP.** Estado de liberación, nivel Clean Core y sucesor de un objeto SAP según el catálogo público (local). | local |
-| [`abap_lint`](docs/TOOLS.md#documentacion) | **abaplint sobre un fragmento.** Pasa abaplint (local, el código no sale del equipo) sobre un fragmento o fuente ABAP. | local |
-| [`docs_community_search`](docs/TOOLS.md#documentacion) | **Buscar en SAP Community.** Busca en SAP Community (blogs y preguntas) por mensaje de error, clase o concepto. | local |
+| [`abap_feature_matrix`](docs/TOOLS.md#documentacion) | **Since which release does this syntax exist?** Availability of each ABAP language feature per release (7.40 … 7.58, 2025). | local |
+| [`docs_search`](docs/TOOLS.md#documentacion) | **Search ABAP documentation.** Searches the official ABAP keyword documentation (standard and cloud), Clean ABAP, the DSAG guide, ABAP cheat sheets and RAP samples, locally. | local |
+| [`docs_fetch`](docs/TOOLS.md#documentacion) | **Read a documentation page.** Returns the full content of a document by the id docs_search gives. | local |
+| [`clean_core_objects`](docs/TOOLS.md#documentacion) | **Released objects catalog (Clean Core).** Searches SAP's public catalog (abap-atc-cr-cv-s4hc, local) for released/deprecated objects by name or topic, with Clean Core level (A released … D all) and successors. | local |
+| [`clean_core_object`](docs/TOOLS.md#documentacion) | **Clean Core state of an SAP object.** Release state, Clean Core level and successor of an SAP object according to the public catalog (local). | local |
+| [`abap_lint`](docs/TOOLS.md#documentacion) | **abaplint on a snippet.** Runs abaplint locally (code never leaves the machine) on an ABAP snippet or source. | local |
+| [`docs_community_search`](docs/TOOLS.md#documentacion) | **Search SAP Community.** Searches SAP Community (blogs and questions) by error message, class or concept. | local |
 
 <a id="g-escritura"></a>
-### Escritura controlada
+### Controlled writes
 
-*Guardar cambios solo en desarrollo, en la orden correcta y con la sintaxis verificada antes.*
+*Save changes only in development, in the right transport, previewed and confirmed by a human.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`write_source`](docs/TOOLS.md#escritura) | **Guardar fuente en SAP.** Sustituye la fuente COMPLETA de un objeto existente (o de un include de clase), en la orden indicada. | escribe (DEV autorizado) |
-| [`activate`](docs/TOOLS.md#escritura) | **Activar objeto.** Activa un objeto y devuelve los mensajes de SAP tal cual (errores con línea, avisos, objetos que quedan inactivos). | escribe (DEV autorizado) |
-| [`write_text_elements`](docs/TOOLS.md#escritura) | **Crear o cambiar símbolos de texto.** Añade o modifica símbolos de texto (o textos de selección) de un programa/clase/grupo, fusionando con los existentes: no borra los que no se mencionan. | escribe (DEV autorizado) |
-| [`create_transport`](docs/TOOLS.md#escritura) | **Crear orden de transporte.** Crea una orden workbench para el paquete de un objeto, ANTES de la primera edición, para que el cambio caiga en la orden del ticket y no en una tarea reutilizada. | escribe (DEV autorizado) |
+| [`write_source`](docs/TOOLS.md#escritura) | **Save source to SAP.** Replaces the FULL source of an existing object (or class include) in the given transport, after a preview with syntax check and diff and a human confirmation. | writes (authorized DEV) |
+| [`activate`](docs/TOOLS.md#escritura) | **Activate object.** Activates an object and returns SAP's messages as they are (errors with line, warnings, objects left inactive). | writes (authorized DEV) |
+| [`write_text_elements`](docs/TOOLS.md#escritura) | **Create or change text symbols.** Adds or changes text symbols (or selection texts) of a program/class/group, merging with the existing ones: nothing not mentioned is deleted. | writes (authorized DEV) |
+| [`create_transport`](docs/TOOLS.md#escritura) | **Create transport request.** Creates a workbench request for an object's package BEFORE the first edit, so the change lands in the ticket's transport and not in a reused task. | writes (authorized DEV) |
 
 <a id="g-transport-risk"></a>
 ### DoZimple Transport Risk
 
-*Decidir si un pase entero puede ir a calidad o productivo, con el porqué en lenguaje de negocio.*
+*Decide whether a whole release can go to QA or production, with the why in business terms.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`analyze_transport_risk`](docs/TOOLS.md#transport-risk) | **Riesgo de transporte.** Dice si una orden (o un pase de varias, separadas por coma) es segura para pasar a calidad o productivo: tareas sin liberar, estado de importación, dependencias que no viajan, acceso posicional, bloqueos del CTS, cola de importación. | lectura |
-| [`import_health`](docs/TOOLS.md#transport-risk) | **Salud de importaciones.** Salud de las importaciones de un destino (calidad o productivo): responde «¿cómo van los pases a productivo?». | lectura |
-| [`failure_ranking`](docs/TOOLS.md#transport-risk) | **Objetos que más fallan al importar.** Ranking de objetos por historial de fallos de importación en un destino. | lectura |
-| [`change_audit`](docs/TOOLS.md#transport-risk) | **Evidencia de auditoría de cambios.** Evidencia para una auditoría de gestión de cambios en un destino: qué entró, con qué ticket, de qué iniciativa y origen. | lectura |
-| [`object_transport_history`](docs/TOOLS.md#transport-risk) | **Historial de transportes de un objeto.** Qué órdenes han tocado un objeto, cuándo, y cuáles llegaron ya al destino. | lectura |
-| [`remote_source`](docs/TOOLS.md#transport-risk) | **Fuente en el destino.** La fuente de un objeto TAL COMO ESTÁ en calidad o productivo, leída por el canal de TMS (como «Traer versiones remotas»). | lectura |
-| [`transport_source_check`](docs/TOOLS.md#transport-risk) | **Código de una orden contra el destino.** Compara el código de los objetos de una orden con el del destino: objetos que no existen allí (R3.4) y deriva de versión — firmas, campos o parámetros distintos que no viajan en la orden (R3.5). | lectura |
+| [`analyze_transport_risk`](docs/TOOLS.md#transport-risk) | **Transport risk.** Tells whether a transport (or a release of several, comma-separated) is safe to move to QA or production: unreleased tasks, import status, dependencies that don't travel, positional access, CTS locks, import queue. | read |
+| [`import_health`](docs/TOOLS.md#transport-risk) | **Import health.** Health of the imports into a target (QA or production): answers “how are the releases to production going?”. | read |
+| [`failure_ranking`](docs/TOOLS.md#transport-risk) | **Objects that fail most on import.** Ranking of objects by import failure history in a target. | read |
+| [`change_audit`](docs/TOOLS.md#transport-risk) | **Change audit evidence.** Evidence for a change management audit on a target: what went in, with which ticket, initiative and origin. | read |
+| [`object_transport_history`](docs/TOOLS.md#transport-risk) | **Transport history of an object.** Which transports touched an object, when, and which already reached the target. | read |
+| [`remote_source`](docs/TOOLS.md#transport-risk) | **Source on the target.** The source of an object AS IT IS in QA or production, read through TMS (like “Retrieve remote versions”). | read |
+| [`transport_source_check`](docs/TOOLS.md#transport-risk) | **Transport code against the target.** Compares the code of a transport's objects with the target: objects missing there (R3.4) and version drift — signatures, fields or parameters that differ and don't travel in the transport (R3.5). | read |
 
 <a id="g-operacion"></a>
-### Operación y crecimiento
+### Operations and growth
 
-*Ver qué funciona en cada sistema y decidir con datos cuál es la siguiente tool.*
+*See what works on each system and decide the next tool with data.*
 
-| Tool | Qué hace | Acceso |
+| Tool | What it does | Access |
 |---|---|---|
-| [`sap_systems`](docs/TOOLS.md#operacion) | **Sistemas SAP y tools disponibles.** Lista los sistemas configurados (rol, escritura, módulos). | local |
-| [`report_gap`](docs/TOOLS.md#operacion) | **Anotar una tool que falta.** Anota una necesidad que ninguna tool cubre (p. ej. «crear una tabla en 7.50», «liberar una tarea», «leer un SmartForm»), con el rodeo que se usó. | local |
-| [`usage_stats`](docs/TOOLS.md#operacion) | **Uso de las tools y huecos.** Resumen del registro local: llamadas por tool, tasa de fallo y tipo de fallo, sistemas, y los huecos anotados con report_gap agrupados. | local |
+| [`sap_systems`](docs/TOOLS.md#operacion) | **SAP systems and available tools.** Lists the configured systems (role, writes, data class, modules) and, optionally, checks connectivity and which tools work on each. | local |
+| [`report_gap`](docs/TOOLS.md#operacion) | **Record a missing tool.** Records a need no tool covers (e.g. something you had to do manually in a transaction), to decide what to build next. | local |
+| [`usage_stats`](docs/TOOLS.md#operacion) | **Tool usage and gaps.** Summary of the local log: calls per tool, failure rate and type, systems, and the gaps recorded with report_gap. | local |
 
 <!-- tools:end -->
 
-## Flujos guiados
+## Guided flows
 
 <!-- prompts:start -->
-Aparecen como comandos en el cliente MCP (en Claude Code: `/mcp__abap-adt-doZimple__<nombre>`) y encadenan las tools
-con las reglas de trabajo de un consultor senior.
+They show up as commands in the MCP client (in Claude Code: `/mcp__abap-adt-doZimple__<name>`) and chain the tools
+with the working rules of a senior consultant.
 
-| Flujo | Qué hace | Encadena |
+| Flow | What it does | Chain |
 |---|---|---|
-| `revisar_pase` — Revisar una orden antes del pase | Revisión completa de una orden: código, compañeros ausentes, bloqueos y, con el módulo de riesgo, su análisis. | transport_contents → transport_diff → inactive_objects → co_change + edit_preflight → analyze_transport_risk (si hay módulo) → informe en tres capas: negocio, consultor, Basis |
-| `remediar_atc` — Remediar hallazgos ATC de un objeto | ATC → documentación y nota SAP → sucesor liberado → corrección → sintaxis → guardado con orden. | edit_preflight → run_atc (BEFORE) → explain + api_release_state + where_used/object_versions → clasificación CAMBIAR/INVESTIGAR/NO_CAMBIAR → atc_quickfix → syntax_check → write_source con la orden (con OK humano) → run_atc (AFTER) y reducción de P1 |
-| `diagnosticar_ticket` — Diagnosticar un incidente | Dumps, jobs, log de aplicación y errores de Gateway alrededor de un incidente. | dumps → jobs → application_log → gateway_errors → transaction_info / get_source / object_versions / transport_contents → causa probable con evidencia y lo que no se pudo comprobar |
+| `revisar_pase` — Review a transport before release | Full review of a transport: code, missing companions, locks and, with the risk module, its analysis. | transport_contents → transport_diff → inactive_objects → co_change + edit_preflight → analyze_transport_risk (if module) → three-layer report: business, consultant, Basis |
+| `remediar_atc` — Remediate ATC findings of an object | ATC → documentation and SAP note → released successor → fix → syntax → save in the transport. | edit_preflight → run_atc (BEFORE) → explain + api_release_state + where_used/object_versions → CHANGE/INVESTIGATE/KEEP classification → atc_quickfix → syntax_check → write_source in the transport (with human OK) → run_atc (AFTER) and P1 reduction |
+| `diagnosticar_ticket` — Diagnose an incident | Dumps, jobs, application log and Gateway errors around an incident. | dumps → jobs → application_log → gateway_errors → transaction_info / get_source / object_versions / transport_contents → probable cause with evidence and what could not be checked |
 <!-- prompts:end -->
 
 ## DoZimple Transport Risk
 
-El módulo más valioso para la operación: **dice, antes de liberar, si una orden o un pase entero puede ir a calidad
-o productivo, y por qué no**, en tres capas — veredicto de negocio para el PMO, qué revisar para el consultor y
-acciones de pase para Basis.
+The most valuable module for operations: **before releasing, it tells whether a transport or a whole release can go
+to QA or production, and why not**, in three layers — a business verdict for the PMO, what to review for the
+consultant, and release actions for Basis.
 
-- **Pases completos, no órdenes sueltas:** lo que viaja en una orden cubre a las demás; calcula la secuencia de
-  importación, detecta dependencias mutuas y colisiones entre órdenes.
-- **Lo que se rompe en silencio:** accesos posicionales a estructuras que cambian, dependencias de código y de
-  diccionario que no viajan y no existen en el destino, deriva de versión.
-- **El estado real del landscape:** cola de importación del destino, bloqueos del CTS, transportes de copias que
-  arrastran cambios ajenos, salud de las importaciones y objetos que más fallan.
-- **Evidencia para auditoría** de gestión de cambios.
+- **Whole releases, not single transports:** what travels in one transport covers the others; it computes the import
+  sequence and detects mutual dependencies and collisions between transports.
+- **What breaks silently:** positional access to structures that change, code and dictionary dependencies that don't
+  travel and don't exist on the target, version drift.
+- **The real state of the landscape:** target import queue, CTS locks, transports of copies that drag other people's
+  changes, import health and the objects that fail most.
+- **Evidence for change management audits.**
 
-Funciona sobre cualquier pila ABAP con CTS (ECC y S/4HANA) y es de solo lectura en todos los sistemas. Requiere un
-**componente SAP propietario de DoZimple** (servicio ICF en desarrollo y RFC de solo lectura en los destinos), que no
-se distribuye en este repositorio.
+It works on any ABAP stack with CTS (ECC and S/4HANA) and is read-only on every system. It requires a **proprietary
+DoZimple SAP component** (ICF service in development and read-only RFCs on the targets), which is not distributed in
+this repository.
 
-**¿Quieres implantarlo en tu landscape? → [dozimple.cl](https://dozimple.cl)**
+**Want it in your landscape? → [dozimple.cl](https://dozimple.cl)**
 
-## Seguridad
+## Security
 
-Diseñado para poder presentarse ante Seguridad y Basis sin excepciones. Detalle y modelo de amenazas:
-**[SECURITY.md](SECURITY.md)**.
+Designed to pass a Security and Basis review without exceptions. Details: **[SECURITY.md](SECURITY.md)** and the
+**[threat model](docs/THREAT_MODEL.md)** (STRIDE and OWASP Top 10 for LLM applications).
 
-- **Sin superficie de red:** solo stdio; no abre puertos.
-- **Credenciales en el llavero del sistema operativo,** nunca en archivos, logs ni respuestas.
-- **Política por rol:** calidad y productivo nunca se escriben; en desarrollo, solo con autorización explícita.
-- **Ninguna escritura sin confirmación humana:** vista previa con la sintaxis de SAP y el diff real, y confirmación
-  por elicitación o con un token de un solo uso atado a esos argumentos exactos.
-- **Registro de auditoría encadenado por hash** de toda escritura y ejecución, verificable con `npm run audit:verify`.
-- **Material de credenciales y datos de personal de SAP bloqueados** en las consultas SQL, también a través de vistas
-  y CDS, aunque el usuario tenga autorización.
-- **Datos personales enmascarados y tope de filas** en sistemas con datos productivos.
-- **Nada de datos del cliente hacia internet:** la búsqueda online de documentación está apagada por defecto y,
-  si se habilita, se filtra toda consulta con objetos, órdenes, sistemas, usuarios o nombres de cliente.
-- **Terceros aislados** en su propio proceso y con entorno mínimo.
-- **Cadena de suministro controlada:** 4 dependencias de producción con versión exacta, sin scripts de instalación,
-  firmas verificadas, SBOM CycloneDX, auditoría y escaneo de secretos en cada commit y en CI.
+- **No network surface:** stdio only; no ports are opened.
+- **Credentials in the OS keychain** (macOS Keychain or Linux Secret Service), never in files, logs or responses.
+- **Policy per role:** QA and production are never written; development only with explicit authorization.
+- **No write without human confirmation:** a preview with SAP's syntax check and the real diff, confirmed through MCP
+  elicitation or a single-use token bound to those exact arguments.
+- **Hash-chained audit log** of every write and execution, fail-closed (no log, no write), verifiable with
+  `npm run audit:verify`.
+- **SAP credential material and HR data blocked** in SQL queries, also through views and CDS, even if the SAP user is
+  authorized. Validated against a real S/4HANA 2023 system, where standard views and CDS read USR02 without naming it.
+- **Personal data masked and row caps** on systems with production data.
+- **No customer data to the internet:** online documentation search is off by default and, when enabled, every query
+  with objects, transports, systems, users or customer names is blocked.
+- **Third parties isolated** in their own process with a minimal environment.
+- **Controlled supply chain:** 4 production dependencies pinned to exact versions, no install scripts, verified
+  registry signatures, CycloneDX SBOM, audit and secret scanning on every commit and in CI.
 
-Modelo de amenazas con STRIDE y OWASP Top 10 para aplicaciones LLM: **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)**.
-
-## Compatibilidad
+## Compatibility
 
 | | |
 |---|---|
-| SAP | ECC 6.0 / NetWeaver 7.50 en adelante y S/4HANA on-premise o private cloud, vía ADT (`/sap/bc/adt`). Probado en vivo en S/4HANA 2023 (SAP_BASIS 7.58) y ECC 6.0 EHP8 (SAP_BASIS 7.50). Las funciones que dependen del release (p. ej. estado de liberación de APIs) se detectan por sistema |
-| Clientes MCP | Claude Code, Kiro y cualquier cliente compatible con MCP por stdio |
-| Plataforma | Node.js 22+. Credenciales en el llavero de macOS, en el Secret Service de Linux o en variables de entorno |
+| SAP | ECC 6.0 / NetWeaver 7.50 and later, and S/4HANA on-premise or private cloud, through ADT (`/sap/bc/adt`). Tested live on S/4HANA 2023 (SAP_BASIS 7.58) and ECC 6.0 EHP8 (SAP_BASIS 7.50). Release-dependent features (e.g. API release state) are detected per system |
+| MCP clients | Claude Code, Kiro and any MCP client over stdio |
+| Platform | Node.js 22+. Credentials in the macOS Keychain, the Linux Secret Service or environment variables |
 
-## Instalación
+## Installation
 
 ```sh
 npm ci && npm run build
 mkdir -p ~/.config/abap-adt-dozimple
-cp config/systems.example.json ~/.config/abap-adt-dozimple/systems.json   # sistemas, roles y permisos
-scripts/set-password.sh MI_DEV                                           # pide la clave; va al llavero (--strict: confirma cada lectura)
-npm run smoke -- MI_DEV                                                  # validación de solo lectura
+cp config/systems.example.json ~/.config/abap-adt-dozimple/systems.json   # systems, roles and permissions (chmod 600)
+scripts/set-password.sh MY_DEV                                           # prompts for the password; stored in the keychain
+npm run smoke -- MY_DEV                                                  # read-only validation
 ```
 
-Registro en el cliente MCP:
+MCP client registration:
 
 ```json
-{ "mcpServers": { "abap-adt-doZimple": { "command": "node", "args": ["/ruta/a/abap-adt-doZimple/dist/index.js"] } } }
+{ "mcpServers": { "abap-adt-doZimple": { "command": "node", "args": ["/path/to/abap-adt-doZimple/dist/index.js"] } } }
 ```
 
-Grupo **Documentación SAP** (opcional): instala [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs)
-(Apache-2.0, variante `abap`) en una carpeta aparte y declara su arranque en `sidecars.docs` de `systems.json` (ver
-`config/systems.example.json`). Corre como proceso aislado; la búsqueda online queda apagada salvo `allowOnline`.
+**SAP documentation** group (optional): install [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs)
+(Apache-2.0, `abap` variant) in a separate folder and declare how to start it in `sidecars.docs` of `systems.json`
+(see `config/systems.example.json`). It runs as an isolated process; online search stays off unless `allowOnline`.
 
-Para contribuir o extender: `git config core.hooksPath .githooks` (escáner de secretos y datos de clientes antes de
-cada commit) y la guía [`nueva-tool`](.claude/skills/nueva-tool/SKILL.md) — añadir una tool es añadir un archivo.
+To contribute or extend: `git config core.hooksPath .githooks` (secret and customer-data scanner before every commit)
+and the [`nueva-tool`](.claude/skills/nueva-tool/SKILL.md) guide — adding a tool means adding one file. Code comments
+and tool descriptions are in Spanish; contributions in English are welcome.
 
-## Créditos
+## Credits
 
-abap-adt-doZimple se construye sobre el trabajo de otros, y lo reconoce: cada tool indica sus créditos en la
-[referencia](docs/TOOLS.md). **Dependencia**: se usa su código. **Datos**: contenido de terceros consultado.
-**Idea**: diseño estudiado y reimplementado sin copiar código. **Algoritmo**: método publicado.
+abap-adt-doZimple is built on other people's work, and says so: each tool lists its credits in the
+[reference](docs/TOOLS.md). **Dependency**: its code is used. **Data**: third-party content that is queried.
+**Idea**: a design studied and reimplemented without copying code. **Algorithm**: a published method.
 
 <!-- credits:start -->
-| Proyecto | Autor / titular | Licencia | Tipo | Usado en |
+| Project | Author / holder | License | Type | Used in |
 |---|---|---|---|---|
-| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependencia | todas (núcleo), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` y 21 más |
-| [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependencia | todas (núcleo) |
-| [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependencia | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` y 1 más |
-| [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam y contribuidores | MIT | dependencia | `abap_lint` |
-| [zod](https://github.com/colinhacks/zod) | Colin McDonnell y contribuidores | MIT | dependencia | todas (núcleo) |
-| [ABAP Keyword Documentation](https://help.sap.com/doc/abapdocu_latest_index_htm/latest/en-US/index.htm) | SAP SE | © SAP SE | datos | `docs_search`, `docs_fetch` |
-| [ABAP Cheat Sheets](https://github.com/SAP-samples/abap-cheat-sheets) | SAP (SAP-samples) | Apache-2.0 | datos | `docs_search` |
-| [Clean ABAP (SAP Style Guides)](https://github.com/SAP/styleguides) | SAP | según el repositorio | datos | `docs_search` |
-| [DSAG ABAP-Leitfaden](https://github.com/marianfoo/DSAG-ABAP-Guide) | DSAG e.V. | según el repositorio | datos | `docs_search` |
-| [ABAP Feature Matrix](https://software-heroes.com/en/abap-feature-matrix) | Software-Heroes | © Software-Heroes | datos | `abap_feature_matrix` |
-| [Released objects / Cloudification Repository (abap-atc-cr-cv-s4hc)](https://github.com/SAP/abap-atc-cr-cv-s4hc) | SAP | Apache-2.0 | datos | `clean_core_objects`, `clean_core_object` |
-| [SAP Community / SAP Help Portal](https://community.sap.com) | SAP SE y autores de la comunidad | términos de SAP | datos | `docs_community_search` |
+| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependency | all (core), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` and 21 more |
+| [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependency | all (core) |
+| [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependency | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` and 1 more |
+| [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam and contributors | MIT | dependency | `abap_lint` |
+| [zod](https://github.com/colinhacks/zod) | Colin McDonnell and contributors | MIT | dependency | all (core) |
+| [ABAP Keyword Documentation](https://help.sap.com/doc/abapdocu_latest_index_htm/latest/en-US/index.htm) | SAP SE | © SAP SE | data | `docs_search`, `docs_fetch` |
+| [ABAP Cheat Sheets](https://github.com/SAP-samples/abap-cheat-sheets) | SAP (SAP-samples) | Apache-2.0 | data | `docs_search` |
+| [Clean ABAP (SAP Style Guides)](https://github.com/SAP/styleguides) | SAP | per repository | data | `docs_search` |
+| [DSAG ABAP-Leitfaden](https://github.com/marianfoo/DSAG-ABAP-Guide) | DSAG e.V. | per repository | data | `docs_search` |
+| [ABAP Feature Matrix](https://software-heroes.com/en/abap-feature-matrix) | Software-Heroes | © Software-Heroes | data | `abap_feature_matrix` |
+| [Released objects / Cloudification Repository (abap-atc-cr-cv-s4hc)](https://github.com/SAP/abap-atc-cr-cv-s4hc) | SAP | Apache-2.0 | data | `clean_core_objects`, `clean_core_object` |
+| [SAP Community / SAP Help Portal](https://community.sap.com) | SAP SE and community authors | SAP terms | data | `docs_community_search` |
 | [ABAP Remote FS (vscode_abap_remote_fs)](https://github.com/marcellourbani/vscode_abap_remote_fs) | Marcello Urbani | MIT | idea | `syntax_check` |
 | [mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) | mario-andreschak | MIT | idea | `search_objects`, `get_source`, `package_contents`, `ddic_type_info`, `transaction_info`, `table_contents` |
-| [ARC-1](https://github.com/arc-mcp/arc-1) | arc-mcp (Marian Zeis y contribuidores) | MIT | idea | `transport_diff`, `atc_quickfix`, `gateway_errors` |
-| [vibing-steampunk](https://github.com/oisee/vibing-steampunk) | oisee y contribuidores | MIT | idea | `co_change`, `api_release_state`, `jobs`, `application_log` |
-| [ABAP Accelerator for Amazon Q Developer](https://github.com/aws-solutions-library-samples/guidance-for-deploying-sap-abap-accelerator-for-amazon-q-developer) | AWS Solutions Library Samples | MIT-0 | idea | todas (núcleo), `usage_stats` |
-| [An O(ND) Difference Algorithm and Its Variations (1986)](https://doi.org/10.1007/BF01840446) | Eugene W. Myers | algoritmo publicado | algoritmo | `transport_diff`, `atc_quickfix` |
+| [ARC-1](https://github.com/arc-mcp/arc-1) | arc-mcp (Marian Zeis and contributors) | MIT | idea | `transport_diff`, `atc_quickfix`, `gateway_errors` |
+| [vibing-steampunk](https://github.com/oisee/vibing-steampunk) | oisee and contributors | MIT | idea | `co_change`, `api_release_state`, `jobs`, `application_log` |
+| [ABAP Accelerator for Amazon Q Developer](https://github.com/aws-solutions-library-samples/guidance-for-deploying-sap-abap-accelerator-for-amazon-q-developer) | AWS Solutions Library Samples | MIT-0 | idea | all (core), `usage_stats` |
+| [An O(ND) Difference Algorithm and Its Variations (1986)](https://doi.org/10.1007/BF01840446) | Eugene W. Myers | published algorithm | algorithm | `transport_diff`, `atc_quickfix` |
 <!-- credits:end -->
 
-Licencias completas de las dependencias: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Si eres autor de alguno de
-estos proyectos y quieres ajustar cómo se te cita, escríbenos a través de [dozimple.cl](https://dozimple.cl).
+Full dependency licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). If you are the author of one of these
+projects and want to adjust how you are credited, reach us at [dozimple.cl](https://dozimple.cl).
 
-## Sobre DoZimple
+## About DoZimple
 
-**[DoZimple](https://dozimple.cl)** — tecnología que conecta operación, datos e innovación. Consultoría y desarrollo
-SAP (ABAP, CDS, OData, RAP, Fiori), integración y SAP BTP, software y portales conectados al ERP, e inteligencia
-artificial aplicada sobre fuentes controladas, con respuestas reproducibles y revisión humana.
+**[DoZimple](https://dozimple.cl)** — technology that connects operations, data and innovation. SAP consulting and
+development (ABAP, CDS, OData, RAP, Fiori), integration and SAP BTP, software and portals connected to the ERP, and
+applied artificial intelligence over controlled sources, with reproducible answers and human review.
 
-Este MCP es un ejemplo de cómo trabajamos: IA útil, con control, trazabilidad y seguridad desde el diseño.
-**¿Hablamos? → [dozimple.cl](https://dozimple.cl)**
+This MCP server is an example of how we work: useful AI, with control, traceability and security by design.
+**Let's talk → [dozimple.cl](https://dozimple.cl)**
 
----
+## License
 
-## Licencia
-
-[Apache-2.0](LICENSE) — © 2026 [DoZimple](https://dozimple.cl). Ver también [NOTICE](NOTICE). El componente SAP de
-DoZimple Transport Risk es propietario y no forma parte de este repositorio.
+[Apache-2.0](LICENSE) — © 2026 [DoZimple](https://dozimple.cl). See also [NOTICE](NOTICE). The DoZimple Transport Risk
+SAP component is proprietary and not part of this repository. SAP, ABAP and S/4HANA are trademarks of SAP SE; this
+project is not affiliated with SAP SE.

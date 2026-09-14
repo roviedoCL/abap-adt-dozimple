@@ -42,3 +42,4 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ### Cambiado
 - Licencia: Apache-2.0 (antes, todos los derechos reservados). El componente SAP de DoZimple Transport Risk sigue
   siendo propietario y no forma parte del repositorio.
+- README principal en inglés, con versión en español en `README.es.md`.
