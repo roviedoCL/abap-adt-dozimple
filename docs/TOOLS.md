@@ -1,19 +1,19 @@
 # Referencia de tools — abap-adt-doZimple
 
-Generado desde el código con `npm run docs`. 45 tools en 9 grupos y 3 flujos guiados.
+Generado desde el código con `npm run docs`. 47 tools en 9 grupos y 3 flujos guiados.
 Producto de [DoZimple](https://dozimple.cl).
 
 ## Índice
 
 - [Revisión de código y pases](#revision) — 5 tools: `transport_diff`, `transport_contents`, `co_change`, `inactive_objects`, `edit_preflight`
 - [Calidad, ATC y remediación](#calidad) — 5 tools: `run_atc`, `atc_quickfix`, `api_release_state`, `syntax_check`, `run_unit_tests`
-- [Exploración del repositorio](#exploracion) — 8 tools: `search_objects`, `get_source`, `where_used`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `text_elements`
+- [Exploración del repositorio](#exploracion) — 9 tools: `search_objects`, `get_source`, `where_used`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`
 - [Consulta de datos](#datos) — 2 tools: `sql_query`, `table_contents`
 - [Diagnóstico de incidentes](#diagnostico) — 4 tools: `dumps`, `jobs`, `application_log`, `gateway_errors`
 - [Documentación SAP](#documentacion) — 7 tools: `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint`, `docs_community_search`
 - [Escritura controlada](#escritura) — 4 tools: `write_source`, `activate`, `write_text_elements`, `create_transport`
 - [DoZimple Transport Risk](#transport-risk) — 7 tools: `analyze_transport_risk`, `import_health`, `failure_ranking`, `change_audit`, `object_transport_history`, `remote_source`, `transport_source_check`
-- [Operación y crecimiento](#operacion) — 3 tools: `sap_systems`, `report_gap`, `usage_stats`
+- [Operación y crecimiento](#operacion) — 4 tools: `sap_systems`, `report_gap`, `close_gap`, `usage_stats`
 - [Flujos guiados](#flujos-guiados)
 - [Créditos del núcleo](#creditos-del-nucleo)
 
@@ -109,7 +109,7 @@ Dice, ANTES de modificar un objeto, en qué orden acabará el cambio y por qué:
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `transport` | string |  | Orden en la que QUIERES guardar, para comprobar si es posible |
 
 \* obligatorio
@@ -133,7 +133,7 @@ Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos n
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `transport` | string |  | En vez de un objeto: todos los objetos de esta orden |
 | `variant` | string |  | Variante ATC; por defecto la del sistema |
 | `priorities` | lista de number |  | Filtrar la lista, p. ej. [1,2] |
@@ -159,7 +159,7 @@ Correcciones que SAP ofrece (las mismas de Ctrl+1 en Eclipse) para un hallazgo A
 | `finding` | number |  | Número de hallazgo del run_atc de object_name (o transport); sin ellos, del último run_atc del sistema |
 | `transport` | string |  | Con finding: el hallazgo es del run_atc de esta orden |
 | `object_name` | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `line` | number |  |  |
 | `column` | number |  |  |
 | `apply` | number |  | Propuesta a calcular (de la lista) |
@@ -181,7 +181,7 @@ Estado de liberación de un objeto SAP (clase, FM/BAPI, tabla, CDS…) por contr
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 
 \* obligatorio
 
@@ -199,7 +199,7 @@ Chequeo de sintaxis real de SAP (no abaplint). Si pasas `source`, se comprueba E
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `include` | `main` \| `definitions` \| `implementations` \| `macros` \| `testclasses` | "main" |  |
 | `source` | string |  | Fuente completa a comprobar (sin guardar) |
 | `main_program` | string |  | URI del programa principal, solo para includes ambiguos |
@@ -220,7 +220,7 @@ Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por 
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string | "CLAS" | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string | "CLAS" | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 
 \* obligatorio
 
@@ -242,7 +242,7 @@ Busca objetos del repositorio por nombre (admite * como comodín). Devuelve nomb
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `query` * | string |  | Patrón de nombre, p. ej. ZCL_SD_* o ZFI* |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `max_results` | number | 50 |  |
 
 \* obligatorio
@@ -260,7 +260,7 @@ Lee la fuente de cualquier objeto: programa, include, clase (y sus includes), in
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). Si se omite y el nombre es único, se deduce. |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). Si se omite y el nombre es único, se deduce. |
 | `include` | `main` \| `definitions` \| `implementations` \| `macros` \| `testclasses` | "main" | Solo clases: main (clase completa), definitions, implementations, macros, testclasses |
 | `version` | `active` \| `inactive` | "active" | inactive = lo último guardado aunque no esté activado |
 | `start_line` | number |  |  |
@@ -282,7 +282,7 @@ Lista de uso (where-used) de un objeto: quién lo referencia, con paquete y resp
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `max_results` | number | 100 |  |
 | `snippets` | boolean | false |  |
 
@@ -301,7 +301,7 @@ Historial de versiones de un objeto (fecha, autor, orden). Con show=N devuelve l
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `include` | `main` \| `definitions` \| `implementations` \| `macros` \| `testclasses` | "main" |  |
 | `show` | number |  |  |
 
@@ -359,6 +359,23 @@ Programa, dynpro y parámetros de una transacción (TSTC/TSTCP), con su texto. R
 
 \* obligatorio
 
+### `function_modules` — Módulos de función de un grupo
+
+Lista los módulos de función de un grupo de funciones, con su texto y si son RFC o de actualización. Con function en vez de group, dice a qué grupo pertenece ese módulo y lista sus hermanos. Úsala cuando un nombre resulte ser un grupo y no un módulo, o antes de remediar un grupo entero. Funciona con namespaces (/XXX/).
+
+| | |
+|---|---|
+| **Acceso** | Solo lectura |
+| **Créditos** | [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) — Marcello Urbani (MIT, dependencia) |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
+| `group` | string |  | Grupo de funciones, p. ej. ZDEMO_GROUP |
+| `function` | string |  | En vez del grupo: un módulo; se busca su grupo |
+
+\* obligatorio
+
 ### `text_elements` — Símbolos de texto y textos de selección
 
 Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de un programa, clase o grupo de funciones.
@@ -373,7 +390,7 @@ Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de 
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `category` | `symbols` \| `selections` \| `headings` | "symbols" |  |
 
 \* obligatorio
@@ -657,7 +674,7 @@ Sustituye la fuente COMPLETA de un objeto existente (o de un include de clase), 
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `include` | `main` \| `definitions` \| `implementations` \| `macros` \| `testclasses` | "main" |  |
 | `source` * | string |  | Fuente completa nueva |
 | `transport` | string |  | Orden (o tarea) donde debe ir el cambio. Obligatoria salvo objetos locales |
@@ -681,7 +698,7 @@ Activa un objeto y devuelve los mensajes de SAP tal cual (errores con línea, av
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio
@@ -700,7 +717,7 @@ Añade o modifica símbolos de texto (o textos de selección) de un programa/cla
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  |  |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `category` | `symbols` \| `selections` \| `headings` | "symbols" |  |
 | `elements` * | lista de { id, text, max_length } |  |  |
 | `transport` | string |  |  |
@@ -722,7 +739,7 @@ Crea una orden workbench para el paquete de un objeto, ANTES de la primera edici
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
 | `object_name` * | string |  | Un objeto del paquete: define paquete y capa de transporte |
-| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 | `text` * | string |  | Texto de la orden (máx. 60, E07T-AS4TEXT) |
 | `transport_layer` | string |  |  |
 | `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
@@ -904,6 +921,23 @@ Anota una necesidad que ninguna tool cubre (p. ej. «crear una tabla en 7.50», 
 | `need` * | string |  | Qué hacía falta, en una frase |
 | `workaround` | string |  | Cómo se resolvió (transacción manual, SQL, otra tool…) |
 | `system` | string |  |  |
+
+\* obligatorio
+
+### `close_gap` — Cerrar un hueco anotado
+
+Marca como resuelto un hueco anotado con report_gap (porque ya hay una tool, o porque se comprobó que la anotación era errónea), con una nota del porqué. No borra nada: el hueco sigue en el historial y usage_stats deja de mostrarlo como pendiente. Se identifica por un fragmento de su texto.
+
+| | |
+|---|---|
+| **Acceso** | Local (no conecta a SAP) |
+| **Créditos** | Desarrollo propio de DoZimple |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `match` * | string |  | Fragmento del texto del hueco (sin distinguir mayúsculas) |
+| `note` * | string |  | Por qué queda resuelto: tool que lo cubre o qué se comprobó |
+| `all` | boolean | false | Cerrar todos los que coincidan, si son varios |
 
 \* obligatorio
 

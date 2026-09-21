@@ -27,6 +27,8 @@ export const TYPE_MAP: Record<string, string> = {
   BDEF: "BDEF/BDO",
   SRVD: "SRVD/SRV",
   SRVB: "SRVB/SVB",
+  /** Implementación de ampliación (enhancement): BAdI (ENHO/XHB), plugin de código (ENHO/XHH)… cualquier subtipo. */
+  ENHO: "ENHO",
 };
 
 export const TYPE_HELP =

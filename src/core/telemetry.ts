@@ -32,6 +32,15 @@ export interface GapRecord {
   system?: string;
 }
 
+/** Cierre de un hueco: no se borra el original (historial), se añade esta marca. */
+export interface GapClosure {
+  ts: string;
+  closes: string; // ts del hueco cerrado
+  note: string;
+}
+
+export const recordGapClosure = (r: GapClosure) => append("gaps-closed.jsonl", r);
+
 function append(file: string, rec: object): void {
   try {
     const dir = stateDir();

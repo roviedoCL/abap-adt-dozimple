@@ -57,13 +57,13 @@ El agente elige las tools, las encadena y responde con evidencia. Cada respuesta
 |---|---|---|
 | [Revisión de código y pases](#g-revision) | Saber qué cambia de verdad una orden y qué puede romper, antes de liberarla. | 5 |
 | [Calidad, ATC y remediación](#g-calidad) | Encontrar, entender y corregir hallazgos con la sintaxis y las correcciones reales de SAP. | 5 |
-| [Exploración del repositorio](#g-exploracion) | Leer y entender cualquier objeto ABAP y sus relaciones, en ECC y en S/4HANA. | 8 |
+| [Exploración del repositorio](#g-exploracion) | Leer y entender cualquier objeto ABAP y sus relaciones, en ECC y en S/4HANA. | 9 |
 | [Consulta de datos](#g-datos) | Preguntar a las tablas con ABAP SQL, de solo lectura y sin tocar material de credenciales. | 2 |
 | [Diagnóstico de incidentes](#g-diagnostico) | Reunir en una conversación lo que antes exigía ST22, SM37, SLG1 y /IWFND/ERROR_LOG. | 4 |
 | [Documentación SAP](#g-documentacion) | Responder con la documentación oficial y comprobar qué sintaxis existe en cada release. | 7 |
 | [Escritura controlada](#g-escritura) | Guardar cambios solo en desarrollo, en la orden correcta y con la sintaxis verificada antes. | 4 |
 | [DoZimple Transport Risk](#g-transport-risk) | Decidir si un pase entero puede ir a calidad o productivo, con el porqué en lenguaje de negocio. | 7 |
-| [Operación y crecimiento](#g-operacion) | Ver qué funciona en cada sistema y decidir con datos cuál es la siguiente tool. | 3 |
+| [Operación y crecimiento](#g-operacion) | Ver qué funciona en cada sistema y decidir con datos cuál es la siguiente tool. | 4 |
 <!-- groups:end -->
 
 ## Arquitectura
@@ -139,6 +139,7 @@ la **[referencia completa](docs/TOOLS.md)**.
 | [`package_contents`](docs/TOOLS.md#exploracion) | **Contenido de un paquete.** Objetos de un paquete de desarrollo agrupados por tipo, con sus subpaquetes (TADIR/TDEVC, cualquier release). | lectura |
 | [`ddic_type_info`](docs/TOOLS.md#exploracion) | **Elemento de datos, dominio o tipo tabla.** Definición de un tipo DDIC: elemento de datos (dominio, tipo, longitud, textos), dominio (tipo, longitud, valores fijos, tabla de valores) o tipo tabla (tipo de línea, clave). | lectura |
 | [`transaction_info`](docs/TOOLS.md#exploracion) | **Qué ejecuta una transacción.** Programa, dynpro y parámetros de una transacción (TSTC/TSTCP), con su texto. | lectura |
+| [`function_modules`](docs/TOOLS.md#exploracion) | **Módulos de función de un grupo.** Lista los módulos de función de un grupo de funciones, con su texto y si son RFC o de actualización. | lectura |
 | [`text_elements`](docs/TOOLS.md#exploracion) | **Símbolos de texto y textos de selección.** Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de un programa, clase o grupo de funciones. | lectura |
 
 <a id="g-datos"></a>
@@ -214,6 +215,7 @@ la **[referencia completa](docs/TOOLS.md)**.
 |---|---|---|
 | [`sap_systems`](docs/TOOLS.md#operacion) | **Sistemas SAP y tools disponibles.** Lista los sistemas configurados (rol, escritura, módulos). | local |
 | [`report_gap`](docs/TOOLS.md#operacion) | **Anotar una tool que falta.** Anota una necesidad que ninguna tool cubre (p. ej. «crear una tabla en 7.50», «liberar una tarea», «leer un SmartForm»), con el rodeo que se usó. | local |
+| [`close_gap`](docs/TOOLS.md#operacion) | **Cerrar un hueco anotado.** Marca como resuelto un hueco anotado con report_gap (porque ya hay una tool, o porque se comprobó que la anotación era errónea), con una nota del porqué. | local |
 | [`usage_stats`](docs/TOOLS.md#operacion) | **Uso de las tools y huecos.** Resumen del registro local: llamadas por tool, tasa de fallo y tipo de fallo, sistemas, y los huecos anotados con report_gap agrupados. | local |
 
 <!-- tools:end -->
@@ -314,7 +316,7 @@ abap-adt-doZimple se construye sobre el trabajo de otros, y lo reconoce: cada to
 <!-- credits:start -->
 | Proyecto | Autor / titular | Licencia | Tipo | Usado en |
 |---|---|---|---|---|
-| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependencia | todas (núcleo), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` y 21 más |
+| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependencia | todas (núcleo), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` y 22 más |
 | [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependencia | todas (núcleo) |
 | [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependencia | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` y 1 más |
 | [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam y contribuidores | MIT | dependencia | `abap_lint` |

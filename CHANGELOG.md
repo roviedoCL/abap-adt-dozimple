@@ -55,6 +55,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   smoke test no aborta ante una llamada lenta.
 
 ### Añadido
+- **`function_modules`**: módulos de función de un grupo (texto en el idioma de la conexión, tipo RFC / actualización),
+  o el grupo y los hermanos de un módulo. Funciona con namespaces.
+- **`run_atc` sobre implementaciones de ampliación** (`object_type: ENHO`, cualquier subtipo).
+- **`close_gap`**: marca como resuelto un hueco anotado con `report_gap`, con una nota, sin borrarlo; `usage_stats`
+  separa pendientes y cerrados.
 - **Tipo de objeto resuelto cuando la coincidencia es única**: pedir `PROG` para un include o `TABL` para una
   estructura resuelve el objeto y la respuesta lo anota («se pidió PROG X; en el sistema es PROG/I»). Un grupo de
   funciones nunca se toma por un módulo: el error indica cómo listar sus módulos.

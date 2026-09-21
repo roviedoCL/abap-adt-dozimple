@@ -58,13 +58,13 @@ and **a failure is never presented as an empty result or as success**.
 |---|---|---|
 | [Code review and transports](#g-revision) | Know what a transport really changes and what it may break, before releasing it. | 5 |
 | [Quality, ATC and remediation](#g-calidad) | Find, understand and fix findings with SAP's real syntax check and quick fixes. | 5 |
-| [Repository exploration](#g-exploracion) | Read and understand any ABAP object and its relations, on ECC and S/4HANA. | 8 |
+| [Repository exploration](#g-exploracion) | Read and understand any ABAP object and its relations, on ECC and S/4HANA. | 9 |
 | [Data queries](#g-datos) | Query tables with ABAP SQL, read-only, with sensitive and personal data protected. | 2 |
 | [Incident diagnosis](#g-diagnostico) | One conversation for what used to take ST22, SM37, SLG1 and /IWFND/ERROR_LOG. | 4 |
 | [SAP documentation](#g-documentacion) | Answer from official documentation and check which syntax exists in each release. | 7 |
 | [Controlled writes](#g-escritura) | Save changes only in development, in the right transport, previewed and confirmed by a human. | 4 |
 | [DoZimple Transport Risk](#g-transport-risk) | Decide whether a whole release can go to QA or production, with the why in business terms. | 7 |
-| [Operations and growth](#g-operacion) | See what works on each system and decide the next tool with data. | 3 |
+| [Operations and growth](#g-operacion) | See what works on each system and decide the next tool with data. | 4 |
 <!-- groups:end -->
 
 ## Architecture
@@ -140,6 +140,7 @@ Summary per group; each tool's details — parameters, types, defaults, requirem
 | [`package_contents`](docs/TOOLS.md#exploracion) | **Package contents.** Objects of a development package grouped by type, with subpackages (TADIR/TDEVC, any release). | read |
 | [`ddic_type_info`](docs/TOOLS.md#exploracion) | **Data element, domain or table type.** Definition of a DDIC type: data element (domain, type, length, texts), domain (type, length, fixed values, value table) or table type (line type, key). | read |
 | [`transaction_info`](docs/TOOLS.md#exploracion) | **What a transaction runs.** Program, screen and parameters of a transaction (TSTC/TSTCP), with its text. | read |
+| [`function_modules`](docs/TOOLS.md#exploracion) | **Function modules of a group.** Lists the function modules of a function group with their text and whether they are RFC or update modules; given a module, finds its group and siblings. Works with /XXX/ namespaces. | read |
 | [`text_elements`](docs/TOOLS.md#exploracion) | **Text symbols and selection texts.** Reads the text symbols (TEXT-001…), selection texts or headings of a program, class or function group. | read |
 
 <a id="g-datos"></a>
@@ -215,6 +216,7 @@ Summary per group; each tool's details — parameters, types, defaults, requirem
 |---|---|---|
 | [`sap_systems`](docs/TOOLS.md#operacion) | **SAP systems and available tools.** Lists the configured systems (role, writes, data class, modules) and, optionally, checks connectivity and which tools work on each. | local |
 | [`report_gap`](docs/TOOLS.md#operacion) | **Record a missing tool.** Records a need no tool covers (e.g. something you had to do manually in a transaction), to decide what to build next. | local |
+| [`close_gap`](docs/TOOLS.md#operacion) | **Close a recorded gap.** Marks a gap recorded with report_gap as resolved, with a note (a tool now covers it, or the note turned out to be wrong); nothing is deleted. | local |
 | [`usage_stats`](docs/TOOLS.md#operacion) | **Tool usage and gaps.** Summary of the local log: calls per tool, failure rate and type, systems, and the gaps recorded with report_gap. | local |
 
 <!-- tools:end -->
@@ -315,7 +317,7 @@ abap-adt-doZimple is built on other people's work, and says so: each tool lists 
 <!-- credits:start -->
 | Project | Author / holder | License | Type | Used in |
 |---|---|---|---|---|
-| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependency | all (core), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` and 21 more |
+| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependency | all (core), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` and 22 more |
 | [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependency | all (core) |
 | [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependency | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` and 1 more |
 | [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam and contributors | MIT | dependency | `abap_lint` |
