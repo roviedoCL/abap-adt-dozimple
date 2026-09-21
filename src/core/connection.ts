@@ -96,7 +96,11 @@ export class SapConnection {
     if (!this.basisRelease) {
       this.basisRelease = this.query("SELECT release FROM cvers WHERE component = 'SAP_BASIS'", 1)
         .then((r) => (r.values[0]?.RELEASE as string | undefined)?.trim())
-        .catch(() => undefined);
+        .catch(() => {
+          // Un fallo pasajero (VPN caída un instante) no deja el dato en blanco para siempre: se reintenta después.
+          this.basisRelease = undefined;
+          return undefined;
+        });
     }
     return this.basisRelease;
   }

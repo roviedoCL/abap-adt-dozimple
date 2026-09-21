@@ -37,10 +37,11 @@ export const MASK = "‹oculto›";
  * simple, para enmascararla. Usarla en un WHERE, un alias o una expresión
  * dejaría deducir su valor sin que aparezca en el resultado.
  */
-export function maskPii(cls: DataClass, sql: string, columns: string[], rows: Record<string, unknown>[]): string[] {
+export function maskPii(cls: DataClass, sql: string, columns: string[], rows: Record<string, unknown>[], extra: string[] = []): string[] {
   if (cls === "test") return [];
+  const pii = extra.length ? new Set([...PII_COLUMNS, ...extra.map((c) => c.toUpperCase())]) : PII_COLUMNS;
   const cols = new Set(columns.map((c) => c.toUpperCase()));
-  const mentioned = new Set(sqlWords(sql).flatMap((w) => w.split("~")).filter((w) => PII_COLUMNS.has(w)));
+  const mentioned = new Set(sqlWords(sql).flatMap((w) => w.split("~")).filter((w) => pii.has(w)));
   const hidden = [...mentioned].filter((w) => !cols.has(w));
   if (hidden.length) {
     throw new ToolError(
@@ -50,7 +51,7 @@ export function maskPii(cls: DataClass, sql: string, columns: string[], rows: Re
       "Filtra por la clave (KUNNR, LIFNR, PARTNER…) y deja que la columna salga enmascarada, o consulta un sistema de test.",
     );
   }
-  const masked = columns.filter((c) => PII_COLUMNS.has(c.toUpperCase()));
+  const masked = columns.filter((c) => pii.has(c.toUpperCase()));
   for (const row of rows) for (const c of masked) if (row[c] !== "" && row[c] !== null && row[c] !== undefined) row[c] = MASK;
   return masked;
 }
@@ -179,7 +180,7 @@ export async function guardedQuery(sap: SapConnection, system: SystemConfig, sql
   const r = await sap.query(q, cap);
   const columns = r.columns.map((c) => c.name);
   const notes: string[] = [];
-  const masked = maskPii(cls, q, columns, r.values);
+  const masked = maskPii(cls, q, columns, r.values, system.piiColumns ?? []);
   if (masked.length) notes.push(`Columnas personales enmascaradas (sistema con datos ${cls === "prod" ? "productivos" : "enmascarados"}): ${masked.join(", ")}.`);
   const capped = r.values.length >= cap;
   if (capped) {

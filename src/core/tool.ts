@@ -22,7 +22,15 @@ export interface ToolContext {
   readonly sap: SapConnection;
   /** MCP de terceros aislado (requires.sidecar). */
   sidecar(name: string): Sidecar;
+  /**
+   * Solo en escrituras confirmadas: la huella del estado que el usuario vio en la vista previa. La tool la compara
+   * (dentro del bloqueo) con el estado actual y no escribe si cambió.
+   */
+  confirmedState?: string;
 }
+
+/** Lo que devuelve una vista previa: el texto que se muestra y, opcionalmente, la huella del estado mostrado. */
+export type PreviewResult = string | { text: string; state?: string };
 
 export interface ToolEnv {
   config: Config;
@@ -55,12 +63,17 @@ export interface ToolDef<S extends ZodRawShape = ZodRawShape> {
     /** Envía la consulta a internet: solo existe si el sidecar tiene allowOnline. */
     online?: boolean;
   };
+  /**
+   * Si la tool pide confirmación humana con vista previa antes de ejecutarse. Las tools write la piden SIEMPRE (no
+   * se puede desactivar); las exec tienen que declararlo expresamente: un test falla si una exec no lo decide.
+   */
+  confirm?: boolean;
   run(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<ToolResult>;
   /**
    * Solo tools write: qué va a cambiar, sin cambiar nada (diff, sintaxis,
    * orden). Es lo que el usuario confirma antes de que run() escriba.
    */
-  preview?(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<string>;
+  preview?(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<PreviewResult>;
 }
 
 /** Identidad tipada: da inferencia de los argumentos a partir de `input`. */

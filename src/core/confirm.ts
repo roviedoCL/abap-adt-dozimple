@@ -9,7 +9,7 @@ import { createHash, randomBytes } from "node:crypto";
  */
 export const CONFIRM_TTL_MS = 10 * 60_000;
 
-const pending = new Map<string, { digest: string; exp: number }>();
+const pending = new Map<string, { digest: string; exp: number; state?: string }>();
 
 function canonical(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(canonical);
@@ -28,14 +28,33 @@ export function argsDigest(tool: string, system: string, args: Record<string, un
   return createHash("sha256").update(JSON.stringify([tool, system.toUpperCase(), canonical(args)])).digest("hex");
 }
 
-export function issueToken(tool: string, system: string, args: Record<string, unknown>, now = Date.now()): string {
+/**
+ * `state` es la huella de lo que el usuario vio en la vista previa (p. ej. el sha256 de la fuente actual en SAP):
+ * la tool la compara al escribir para no aplicar un diff sobre algo que cambió entretanto.
+ */
+export function issueToken(tool: string, system: string, args: Record<string, unknown>, now = Date.now(), state?: string): string {
   for (const [t, p] of pending) if (p.exp <= now) pending.delete(t);
   const token = randomBytes(16).toString("hex");
-  pending.set(token, { digest: argsDigest(tool, system, args), exp: now + CONFIRM_TTL_MS });
+  pending.set(token, { digest: argsDigest(tool, system, args), exp: now + CONFIRM_TTL_MS, state });
   return token;
 }
 
 export type TokenCheck = "ok" | "unknown" | "expired" | "mismatch";
+
+/** Como consumeToken, y además devuelve la huella del estado que se vio en la vista previa. */
+export function consumeTokenWithState(
+  token: string,
+  tool: string,
+  system: string,
+  args: Record<string, unknown>,
+  now = Date.now(),
+): { check: TokenCheck; state?: string } {
+  const p = pending.get(token);
+  if (!p) return { check: "unknown" };
+  pending.delete(token);
+  if (p.exp <= now) return { check: "expired" };
+  return p.digest === argsDigest(tool, system, args) ? { check: "ok", state: p.state } : { check: "mismatch" };
+}
 
 /** Consume el token: vale una sola vez, también cuando no coincide. */
 export function consumeToken(
@@ -45,9 +64,10 @@ export function consumeToken(
   args: Record<string, unknown>,
   now = Date.now(),
 ): TokenCheck {
-  const p = pending.get(token);
-  if (!p) return "unknown";
-  pending.delete(token);
-  if (p.exp <= now) return "expired";
-  return p.digest === argsDigest(tool, system, args) ? "ok" : "mismatch";
+  return consumeTokenWithState(token, tool, system, args, now).check;
+}
+
+/** Huella de un contenido tal como se mostró: sha256 con saltos de línea normalizados. */
+export function stateOf(content: string): string {
+  return createHash("sha256").update(content.replace(/\r\n?/g, "\n")).digest("hex");
 }

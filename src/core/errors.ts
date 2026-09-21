@@ -91,8 +91,8 @@ export function renderError(te: ToolError): string {
  */
 export function sanitizeMessage(msg: string, max = 500): string {
   const clean = String(msg)
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, "$1<credenciales>@")
-    .replace(/(authorization["']?\s*[:=]\s*["']?)(basic|bearer)\s+[A-Za-z0-9+/=._-]+/gi, "$1$2 <oculto>")
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, "$1[credenciales]@")
+    .replace(/(authorization["']?\s*[:=]\s*["']?)(basic|bearer)\s+[A-Za-z0-9+/=._-]+/gi, "$1$2 [oculto]")
     .replace(/<[^>]{0,200}>/g, " ")
     .replace(/\s+/g, " ")
     .trim();

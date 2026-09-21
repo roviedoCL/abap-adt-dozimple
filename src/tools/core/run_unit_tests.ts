@@ -16,6 +16,8 @@ export default defineTool({
     "Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada " +
     "fallo. Solo corre tests RISK LEVEL HARMLESS y DURATION SHORT. Si no hay clases de test lo dice: cero tests no es un éxito.",
   access: "exec",
+  // Sin confirmación, decidido: solo tests HARMLESS/SHORT, solo en DEV, y queda en el registro de auditoría.
+  confirm: false,
   requires: { adt: ["/sap/bc/adt/abapunit/testruns"] },
   input: {
     object_name: z.string().min(1),

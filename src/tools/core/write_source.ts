@@ -2,6 +2,7 @@ import { z } from "zod";
 import { activateObject } from "../../core/activation.js";
 import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
 import { CLASS_INCLUDES, resolveObject, sourceUrl, TYPE_HELP } from "../../core/objects.js";
+import { stateOf } from "../../core/confirm.js";
 import { diffLines, unified } from "../../core/diff.js";
 import { assertTrkorr } from "../../core/policy.js";
 import { decideTransport, orderHeaders, transportWarnings } from "../../core/transport.js";
@@ -54,9 +55,10 @@ export default defineTool({
       if (u.hunks) out.push(lines.slice(0, 400).join("\n") + (lines.length > 400 ? `\n[… ${lines.length - 400} líneas más de diff]` : ""));
     }
     out.push("", "Si el objeto está bloqueado en otra orden, la escritura se detendrá sin guardar (compruébalo antes con edit_preflight).");
-    return out.join("\n");
+    // La huella de la fuente mostrada viaja con la confirmación: si cambia antes de escribir, no se escribe.
+    return { text: out.join("\n"), state: stateOf(current) };
   },
-  async run({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap }) {
+  async run({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap, confirmedState }) {
     const requested = transport ? assertTrkorr(transport) : undefined;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
@@ -72,6 +74,17 @@ export default defineTool({
     const saved = await sap.stateful(async (s) => {
       const lock = await s.lock(obj.uri);
       try {
+        // Con el objeto ya bloqueado nadie más puede guardarlo: es el momento de comprobar que sigue siendo la
+        // versión que el usuario vio en la vista previa. Si otra persona guardó entretanto, sus cambios se
+        // perderían en silencio: no se escribe.
+        if (confirmedState && stateOf(await s.getObjectSource(url)) !== confirmedState) {
+          return {
+            ok: false as const,
+            reason:
+              `No se escribió nada: ${obj.name} cambió en SAP después de la vista previa (alguien lo guardó entretanto). ` +
+              `Pide una vista previa nueva: el diff que se aprobó ya no corresponde a lo que hay.`,
+          };
+        }
         const parent = lock.CORRNR ? (await orderHeaders(sap, [lock.CORRNR])).get(lock.CORRNR)?.parent : undefined;
         const d = decideTransport(lock, requested, parent);
         if (!d.ok) return d;

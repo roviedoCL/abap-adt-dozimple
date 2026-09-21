@@ -55,7 +55,18 @@ export function parseAtom(xml: string): AtomEntry[] {
   });
 }
 
+/** Tope de entrada antes de sanear: el saneado repite pasadas y el HTML de un dump puede ser enorme. */
+export const MAX_HTML_INPUT = 2 * 1024 * 1024;
+
+/**
+ * Tras decodificar entidades, «&lt;script&gt;» vuelve a ser «<script>». Este servidor no renderiza HTML, pero un
+ * cliente MCP podría, y el contenido de SAP podría imitar así el formato de las respuestas del servidor: se
+ * neutraliza todo «<» que abra algo con forma de etiqueta. Un «a < b» del texto se conserva.
+ */
+export const neutralizeMarkup = (s: string) => s.replace(/<(?=[A-Za-z!/?])/g, "‹");
+
 export function htmlToText(html: string): string {
+  if (html.length > MAX_HTML_INPUT) html = html.slice(0, MAX_HTML_INPUT) + "\n[… contenido recortado]";
   let noScripts = html;
   for (let prev = ""; prev !== noScripts; ) {
     prev = noScripts;
@@ -65,7 +76,7 @@ export function htmlToText(html: string): string {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|h\d|li|tr|table)>/gi, "\n")
     .replace(/<\/t[dh]>/gi, "\t");
-  return decodeEntities(stripTags(withBreaks))
+  return neutralizeMarkup(decodeEntities(stripTags(withBreaks)))
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")

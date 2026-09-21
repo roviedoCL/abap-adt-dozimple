@@ -35,6 +35,11 @@ const SystemSchema = z.object({
   dataClass: z.enum(["test", "masked", "prod"]).optional(),
   /** Tope de filas por consulta; por defecto test 5000, masked 1000, prod 200. */
   maxRows: z.number().int().min(1).max(5000).optional(),
+  /**
+   * Columnas personales propias de este cliente (campos Z o alias de CDS) que se enmascaran igual que las estándar
+   * en sistemas masked/prod. El enmascarado es por nombre: lo que no esté aquí ni en la lista estándar sale en claro.
+   */
+  piiColumns: z.array(z.string().regex(/^[A-Za-z0-9_/]+$/)).default([]),
   password: z
     .string()
     .regex(/^(keychain|env:[A-Z0-9_]+)$/, 'password: "keychain" o "env:NOMBRE_VARIABLE"')

@@ -5,6 +5,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Seguridad
+- **Auditoría de seguridad del 21-09-2026** (30 hallazgos, ninguno alto ni crítico): corregidos todos los accionables.
+  Los más relevantes: la escritura ya no aplica un diff aprobado sobre un objeto que cambió en SAP después de la vista
+  previa (huella comprobada bajo el bloqueo); filtro de `table_contents` por lista blanca; usuarios SAP validados en
+  filtros de feeds; nombres validados en rutas ADT; `allowSelfSigned` solo en DEV y avisado al arrancar; sin
+  redirecciones en el servicio de riesgo; errores saneados antes de llegar al modelo; contraseñas en memoria con
+  caducidad; toda tool `exec` decide expresamente si pide confirmación; tope de filas también en `jobs` y
+  `application_log`; columnas personales propias por cliente (`piiColumns`); registro de auditoría con bloqueo entre
+  procesos y lectura de la cola; marcado neutralizado tras decodificar HTML; ids online de `docs_fetch` validados ya
+  decodificados. Documentado lo que cada control garantiza y lo que no (token frente a elicitación, cadena de
+  auditoría sin secreto, aviso de «dato» probabilístico). Tests de regresión en `test/audit-2026-09.test.ts`.
+
+### Seguridad
 - **Procedimiento de seguridad en cada commit** ([docs/COMMIT_SECURITY.md](docs/COMMIT_SECURITY.md)): el `pre-commit`
   revisa el código completo y el contenido exacto preparado; un `pre-push` nuevo y el CI revisan todo el historial de
   todas las ramas. El escáner detecta además direcciones (IPs reales, hosts con puertos de SAP, dominios internos),

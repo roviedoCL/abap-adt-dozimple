@@ -227,7 +227,18 @@ if (mode === "history") {
   }
 }
 
-const unique = [...new Set(findings)];
+// Línea base: hallazgos del HISTORIAL ya revisados (p. ej. un valor ficticio en un commit publicado). Solo aplica en
+// modo --history; identifica el hallazgo por commit + archivo + regla, nunca por su valor.
+const baseline = new Set();
+if (mode === "history" && existsSync(".scan-baseline")) {
+  for (const l of readFileSync(".scan-baseline", "utf8").split("\n")) {
+    const m = /^([0-9a-f]{7,40}:\S+)\s{2,}([^#]+?)\s*(#.*)?$/.exec(l.trim());
+    if (m && !l.trim().startsWith("#")) baseline.add(`${m[1]}  ${m[2]}`);
+  }
+}
+const accepted = findings.filter((f) => baseline.has(f.replace(/^([0-9a-f]+:[^:]+):\d+/, "$1")));
+const unique = [...new Set(findings.filter((f) => !accepted.includes(f)))];
+if (accepted.length) console.error(`[scan] ${new Set(accepted).size} hallazgos del historial aceptados en .scan-baseline (revisados, sin secretos reales).`);
 if (unique.length) {
   console.error(`[scan] ✗ ${unique.length} hallazgos (no se muestran los valores):\n  ${unique.join("\n  ")}`);
   console.error("[scan] Nada de credenciales, direcciones ni datos reales: usa datos ficticios (ZDEMO_*, DEVK900123, *.example). Bloqueado.");

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { sqlLiteral } from "../../core/objects.js";
 import { tsv } from "../../core/output.js";
+import { rowCap } from "../../core/datapolicy.js";
 import { defineTool } from "../../core/tool.js";
 
 /**
@@ -26,7 +27,9 @@ const jobs = defineTool({
     from_date: z.string().optional().describe("AAAA-MM-DD; por defecto los últimos 3 días"),
     max: z.number().int().min(1).max(500).default(50),
   },
-  async run({ job_name, user, status, from_date, max }, { sap }) {
+  async run({ job_name, user, status, from_date, max: wanted }, { sap, system }) {
+    // El tope de filas del sistema (datos productivos: 200 por defecto) manda también aquí.
+    const max = Math.min(wanted, rowCap(system));
     const from = ymd(from_date ?? new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10));
     const where = [`jobname LIKE ${like(job_name)}`, `( strtdate >= ${sqlLiteral(from)} OR sdlstrtdt >= ${sqlLiteral(from)} )`];
     if (user) where.push(`sdluname = ${sqlLiteral(user.toUpperCase())}`);
@@ -79,7 +82,7 @@ const appLog = defineTool({
     only_errors: z.boolean().default(false),
     max: z.number().int().min(1).max(500).default(50),
   },
-  async run(a, { sap }) {
+  async run(a, { sap, system }) {
     const from = ymd(a.from_date ?? new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10));
     const where = [`aldate >= ${sqlLiteral(from)}`];
     if (a.object) where.push(`object LIKE ${like(a.object)}`);
@@ -90,7 +93,7 @@ const appLog = defineTool({
     const r = await sap.query(
       `SELECT lognumber, object, subobject, extnumber, aldate, altime, aluser, altcode, alprog, msg_cnt_al, msg_cnt_a, msg_cnt_e, msg_cnt_w ` +
         `FROM balhdr WHERE ${where.join(" AND ")} ORDER BY aldate DESCENDING, altime DESCENDING`,
-      a.max,
+      Math.min(a.max, rowCap(system)),
     );
     if (!r.values.length) return `No hay logs que casen desde ${from}.`;
     return (

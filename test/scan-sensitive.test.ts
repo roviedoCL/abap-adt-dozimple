@@ -160,3 +160,21 @@ describe("escáner: alcance", () => {
     expect(h.out).toMatch(/[0-9a-f]{7}:src\/c\.ts:1\s+token de npm/);
   });
 });
+
+describe("escáner: línea base del historial", () => {
+  it("un hallazgo revisado en .scan-baseline no bloquea; uno nuevo sí", () => {
+    put("src/d.ts", `const t = "${FAKE.npm}";\n`);
+    git("add", "-A");
+    git("commit", "-q", "-m", "fixture");
+    const sha = execFileSync("git", ["rev-parse", "--short=7", "HEAD"], { cwd: repo, encoding: "utf8" }).trim();
+    expect(scan("--history").code).toBe(1);
+    put(".scan-baseline", `${sha}:src/d.ts  token de npm  # ficticio\n`);
+    expect(scan("--history")).toMatchObject({ code: 0 });
+    put("src/e.ts", `const u = "${FAKE.aws}";\n`);
+    git("add", "src/e.ts");
+    git("commit", "-q", "-m", "otro");
+    const r = scan("--history");
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("clave AWS");
+  });
+});
