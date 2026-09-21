@@ -6,8 +6,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ### Seguridad
 - El veto de datos sensibles incluye `ICF_PASSWD` (contraseña del usuario de inicio de sesión fijo de un servicio ICF)
-  y las columnas genéricas `PASSWD` / `PASSWORD`, en cualquier tabla. Detectado al revisar la configuración ICF de un
-  servicio.
+  y las columnas genéricas `PASSWD` / `PASSWORD`, en cualquier tabla, también cuando llegan por un `SELECT *` (se
+  comprueban las columnas del resultado y, si aparece una, no se muestra nada). Detectado al revisar la configuración
+  ICF de un servicio.
 
 ### Seguridad
 - Seguimiento de la auditoría (prioridades 1 y 2 del auditor y DZ-30): **permisos de `systems.json` en Windows**
