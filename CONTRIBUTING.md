@@ -15,11 +15,13 @@ failure into a false success.**
 ## Development setup
 ```sh
 npm ci --ignore-scripts
-git config core.hooksPath .githooks   # pre-commit scanner for secrets and customer data
+npm run hooks                         # pre-commit (whole code) and pre-push (whole history) scanners
 npm run check                         # tests + build + npm audit + signatures + scanner
 ```
 Node.js 22+. To try tools against a system, see *Installation* in the [README](README.md); `npm run smoke -- <SYSTEM>`
 only reads.
+
+Secrets, addresses and customer data: see the [commit security procedure](docs/COMMIT_SECURITY.md).
 
 ## Pull requests
 - `main` is protected: every change goes through a PR and the CI must pass (tests, build, audit, registry signatures,

@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Seguridad
+- **Procedimiento de seguridad en cada commit** ([docs/COMMIT_SECURITY.md](docs/COMMIT_SECURITY.md)): el `pre-commit`
+  revisa el código completo y el contenido exacto preparado; un `pre-push` nuevo y el CI revisan todo el historial de
+  todas las ramas. El escáner detecta además direcciones (IPs reales, hosts con puertos de SAP, dominios internos),
+  más tipos de credenciales (Google, JWT, tokens de GitHub de grano fino, GitLab, cadenas de conexión, secretos
+  asignados, URLs con contraseña, webhooks) y archivos peligrosos por su nombre (`.env`, certificados, claves SSH, el
+  `systems.json` real). 21 tests adversariales.
+
 ### Corregido
 - Workflow de release: la comprobación de `latest` fallaba porque npm tarda unos segundos en propagar la etiqueta
   (la 1.0.0 se publicó bien, pero la release de GitHub no se creó y se completó a mano con los artefactos firmados del
