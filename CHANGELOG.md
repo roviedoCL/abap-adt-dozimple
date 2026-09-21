@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Corregido
+- Workflow de release: la comprobación de `latest` fallaba porque npm tarda unos segundos en propagar la etiqueta
+  (la 1.0.0 se publicó bien, pero la release de GitHub no se creó y se completó a mano con los artefactos firmados del
+  mismo run). Ahora reintenta durante 2 minutos, no republica una versión existente y actualiza la release si ya
+  existe: reintentar un run es seguro.
+
 ## [1.0.0] - 2026-09-21
 
 Primera versión estable, publicada en npm como `@dozimple/abap-adt` con procedencia.
