@@ -2,7 +2,7 @@ import { z } from "zod";
 import { normalizeError } from "../../core/errors.js";
 import { resolveObject, sqlLiteral, TYPE_HELP, type ResolvedObject } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
-import { describeOrder, isOpen, orderHeaders } from "../../core/transport.js";
+import { describeOrder, isOpen, orderHeaders, transportWarnings } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 import type { SapConnection } from "../../core/connection.js";
 
@@ -101,7 +101,10 @@ export default defineTool({
         const w = (await orderHeaders(sap, [wanted])).get(wanted);
         if (!w) verdict.push(`${wanted} no existe en este sistema.`);
         else if (!isOpen(w.trstatus)) verdict.push(`${wanted} no está modificable (${describeOrder(w)}).`);
-        else verdict.push(`${wanted} está abierta: se puede usar.`);
+        else {
+          const warn = await transportWarnings(sap, wanted, system.user);
+          verdict.push(warn.length ? `${wanted} está abierta, pero: ${warn.join(" ")}` : `${wanted} está abierta, con destino y es tuya: se puede usar.`);
+        }
       }
     }
     for (const m of info?.MESSAGES ?? []) verdict.push(`CTS ${m.SEVERITY}: ${m.TEXT}`);

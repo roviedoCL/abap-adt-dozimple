@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { FixProposal } from "abap-adt-api";
-import { recallRun } from "../../core/atc.js";
+import { objectScope, recallRun, runAge, transportScope } from "../../core/atc.js";
+import { assertTrkorr } from "../../core/policy.js";
 import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
 import { diffLines, unified } from "../../core/diff.js";
 import { applyEdits } from "../../core/edits.js";
@@ -36,7 +37,13 @@ export default defineTool({
   access: "read",
   requires: { adt: ["/sap/bc/adt/quickfixes"] },
   input: {
-    finding: z.number().int().min(1).optional().describe("Número de hallazgo del último run_atc en este sistema"),
+    finding: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe("Número de hallazgo del run_atc de object_name (o transport); sin ellos, del último run_atc del sistema"),
+    transport: z.string().optional().describe("Con finding: el hallazgo es del run_atc de esta orden"),
     object_name: z.string().optional(),
     object_type: z.string().optional().describe(TYPE_HELP),
     line: z.number().int().min(1).optional(),
@@ -53,13 +60,32 @@ export default defineTool({
     let context = "";
 
     if (a.finding) {
-      const f = recallRun(system.id)?.findings.find((x) => x.n === a.finding);
-      if (!f) throw new ToolError("INPUT", "No hay ese hallazgo en el último run_atc de este sistema: ejecútalo primero.");
+      // El hallazgo N es del ATC del objeto u orden que se nombran, nunca de otro analizado antes.
+      let key: string | undefined;
+      let named = "";
+      if (a.transport) {
+        const tr = assertTrkorr(a.transport);
+        key = transportScope(tr);
+        named = `la orden ${tr}`;
+      } else if (a.object_name) {
+        const named0 = await resolveObject(c, a.object_name, a.object_type);
+        key = objectScope(named0.name);
+        named = named0.name;
+      }
+      const run = recallRun(system.id, key);
+      if (!run) {
+        throw new ToolError(
+          "INPUT",
+          key ? `No hay un run_atc de ${named} en esta sesión: ejecuta run_atc sobre ese objeto primero.` : "No hay un run_atc en esta sesión: ejecútalo primero.",
+        );
+      }
+      const f = run.findings.find((x) => x.n === a.finding);
+      if (!f) throw new ToolError("INPUT", `El ATC de ${run.scope} tiene ${run.findings.length} hallazgos: no existe el ${a.finding}.`);
       obj = { name: f.objectName, type: f.objectType, uri: f.objectUri };
       src = f.sourceUri;
       line = f.line;
       column = a.column ?? f.column;
-      context = `Hallazgo ${f.n}: P${f.priority} [${f.checkTitle}] ${decode(f.messageTitle)}\n`;
+      context = `Hallazgo ${f.n} del ATC de ${run.scope} (${runAge(run)}): P${f.priority} [${f.checkTitle}] ${decode(f.messageTitle)}\n`;
     } else {
       if (!a.object_name || !a.line) throw new ToolError("INPUT", "Indica finding, o object_name + line.");
       obj = await resolveObject(c, a.object_name, a.object_type);

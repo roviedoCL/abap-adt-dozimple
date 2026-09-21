@@ -18,7 +18,11 @@ export interface UsageRecord {
   system?: string;
   ms: number;
   ok: boolean;
-  kind?: ErrorKind;
+  /**
+   * Tipo de fallo. "RESULT" = la tool funcionó y el resultado es negativo (sintaxis con errores, tests en rojo,
+   * activación rechazada): no es un fallo del servidor y no debe contarse como tal.
+   */
+  kind?: ErrorKind | "RESULT";
 }
 
 export interface GapRecord {
@@ -27,6 +31,15 @@ export interface GapRecord {
   workaround?: string;
   system?: string;
 }
+
+/** Cierre de un hueco: no se borra el original (historial), se añade esta marca. */
+export interface GapClosure {
+  ts: string;
+  closes: string; // ts del hueco cerrado
+  note: string;
+}
+
+export const recordGapClosure = (r: GapClosure) => append("gaps-closed.jsonl", r);
 
 function append(file: string, rec: object): void {
   try {

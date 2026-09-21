@@ -54,6 +54,7 @@ const rules = [
   { name: "clave privada", re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: "clave AWS", re: /\bAKIA[0-9A-Z]{16}\b/ },
   { name: "token de API", re: /\b(sk-[A-Za-z0-9]{20,}|s2_[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/ },
+  { name: "token de npm", re: /\bnpm_[A-Za-z0-9]{36}\b|_authToken\s*=\s*\S{8,}/ },
   { name: "cabecera Authorization con valor", re: /authorization["']?\s*[:=]\s*["'](Basic|Bearer)\s+[A-Za-z0-9+/=._-]{12,}/i },
   { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{|secreto/ },
   { name: "ruta personal", re: /\/Users\/[a-z0-9._-]+\//i },

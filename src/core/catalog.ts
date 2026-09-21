@@ -84,6 +84,7 @@ export const GROUPS: Group[] = [
       { name: "package_contents", credits: ["abapAdtApi", "marioAdt"] },
       { name: "ddic_type_info", credits: ["abapAdtApi", "marioAdt"] },
       { name: "transaction_info", credits: ["abapAdtApi", "marioAdt"] },
+      { name: "function_modules", credits: ADT },
       { name: "text_elements", credits: ADT },
     ],
   },
@@ -153,6 +154,7 @@ export const GROUPS: Group[] = [
     tools: [
       { name: "sap_systems", credits: ADT },
       { name: "report_gap", credits: [] },
+      { name: "close_gap", credits: [] },
       { name: "usage_stats", credits: ["awsAccel"] },
     ],
   },

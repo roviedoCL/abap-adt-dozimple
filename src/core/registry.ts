@@ -9,6 +9,7 @@ import { normalizeError, renderError, ToolError, type ErrorKind } from "./errors
 import { budget } from "./output.js";
 import { appendAudit, auditArgs, type AuditInput } from "./audit.js";
 import { consumeToken, issueToken } from "./confirm.js";
+import { renderNotes, withNotes } from "./notes.js";
 import { assertAccess } from "./policy.js";
 import { recordUsage } from "./telemetry.js";
 import type { SidecarPool } from "./sidecar.js";
@@ -68,7 +69,8 @@ export function eligibleSystems(def: ToolDef<any>, cfg: Config): SystemConfig[] 
 export interface CallOutcome {
   text: string;
   isError: boolean;
-  kind?: ErrorKind;
+  /** "RESULT": la tool respondió con un resultado negativo (no una excepción). */
+  kind?: ErrorKind | "RESULT";
   system?: string;
 }
 
@@ -103,7 +105,9 @@ async function confirmWrite(
     throw new ToolError("POLICY", `No se escribió nada: el confirm_token ${why}.`, "Llama sin confirm_token para obtener una vista previa nueva y enséñasela al usuario.");
   }
 
-  const preview = def.preview ? await def.preview(args, ctx) : `Argumentos: ${JSON.stringify(auditArgs(args))}`;
+  const preview = def.preview
+    ? await withNotes(() => def.preview!(args, ctx)).then(({ result, notes }) => renderNotes(notes) + result)
+    : `Argumentos: ${JSON.stringify(auditArgs(args))}`;
   if (env.elicit) {
     let answer: "accept" | "decline" | "cancel" | undefined;
     try {
@@ -219,10 +223,10 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
           throw new ToolError("INTERNAL", `No se ejecutó: no se pudo escribir el registro de auditoría (${(e as Error).message}).`);
         }
       }
-      const res = await def.run(args, ctx);
-      const text = typeof res === "string" ? res : res.text;
+      const { result: res, notes } = await withNotes(() => def.run(args, ctx));
+      const text = renderNotes(notes) + (typeof res === "string" ? res : res.text);
       const isError = typeof res === "string" ? false : !!res.isError;
-      outcome = { text: head + budget(text), isError, system: systemId };
+      outcome = { text: head + budget(text), isError, kind: isError ? "RESULT" : undefined, system: systemId };
     }
   } catch (e) {
     let te = normalizeError(e, systemId);

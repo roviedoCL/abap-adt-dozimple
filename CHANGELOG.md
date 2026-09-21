@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Seguridad
+- El escáner de datos sensibles detecta tokens de npm y cualquier `_authToken` (p. ej. un `npm login` que escribe en
+  el `.npmrc` del proyecto).
 - **Parámetros desconocidos rechazados**: una llamada con un parámetro que la tool no declara (p. ej. `transprot` mal
   escrito) falla con la lista de parámetros admitidos y no ejecuta nada; antes se descartaba en silencio.
 - **Escrituras con confirmación humana obligatoria.** `write_source`, `activate`, `write_text_elements` y
@@ -33,6 +35,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   divulgación coordinada a 90 días.
 
 ### Corregido
+- **`run_atc(explain=N)` y `atc_quickfix(finding=N)` podían devolver el hallazgo de OTRO objeto**: el ATC se recordaba
+  solo por sistema, así que pedir la documentación del hallazgo 1 de un objeto devolvía la del último objeto
+  analizado, con apariencia correcta. Ahora se recuerda por sistema y objeto u orden; `explain` sobre un objeto aún
+  no analizado ejecuta su ATC, y toda respuesta dice de qué objeto y de cuándo es el ATC. Test de regresión.
+- Telemetría: un resultado negativo (sintaxis con errores, tests en rojo, activación rechazada) ya no cuenta como
+  fallo del servidor; `usage_stats` lo muestra en su propia columna.
 - Documentación de hallazgos ATC y correcciones de SAP: las entidades HTML se decodificaban con `&amp;` antes que el
   resto, así que un texto como `&amp;#39;` terminaba en `'` (doble desescape). Ahora hay un único limpiador de HTML
   (`core/feeds.ts`) que decodifica una sola vez y quita etiquetas hasta que no queda ninguna. Detectado por CodeQL.
@@ -45,6 +53,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 - NW 7.50 (validado en vivo en ECC 6.0 EHP8): `run_atc` sobre una orden hace una corrida única sobre sus objetos
   cuando el release no admite la orden como conjunto ATC; `edit_preflight` acota las órdenes candidatas a 10; el
   smoke test no aborta ante una llamada lenta.
+
+### Añadido
+- **`function_modules`**: módulos de función de un grupo (texto en el idioma de la conexión, tipo RFC / actualización),
+  o el grupo y los hermanos de un módulo. Funciona con namespaces.
+- **`run_atc` sobre implementaciones de ampliación** (`object_type: ENHO`, cualquier subtipo).
+- **`close_gap`**: marca como resuelto un hueco anotado con `report_gap`, con una nota, sin borrarlo; `usage_stats`
+  separa pendientes y cerrados.
+- **Tipo de objeto resuelto cuando la coincidencia es única**: pedir `PROG` para un include o `TABL` para una
+  estructura resuelve el objeto y la respuesta lo anota («se pidió PROG X; en el sistema es PROG/I»). Un grupo de
+  funciones nunca se toma por un módulo: el error indica cómo listar sus módulos.
+- **Avisos de la orden antes de escribir** (vista previa de `write_source` y `write_text_elements`, `edit_preflight`
+  y tras `create_transport`): orden sin sistema destino (lo guardado no viajaría), orden o tarea de otra persona,
+  orden no modificable.
 
 ### Cambiado
 - Paquete npm `@dozimple/abap-adt` (antes `abap-adt-dozimple`, privado): solo `dist`, documentación, licencias,

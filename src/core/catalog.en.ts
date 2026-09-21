@@ -32,6 +32,7 @@ export const TOOLS_EN: Record<string, string> = {
   object_versions: "**Object versions.** Version history of an object (date, author, transport).",
   package_contents: "**Package contents.** Objects of a development package grouped by type, with subpackages (TADIR/TDEVC, any release).",
   ddic_type_info: "**Data element, domain or table type.** Definition of a DDIC type: data element (domain, type, length, texts), domain (type, length, fixed values, value table) or table type (line type, key).",
+  function_modules: "**Function modules of a group.** Lists the function modules of a function group with their text and whether they are RFC or update modules; given a module, finds its group and siblings. Works with /XXX/ namespaces.",
   transaction_info: "**What a transaction runs.** Program, screen and parameters of a transaction (TSTC/TSTCP), with its text.",
   text_elements: "**Text symbols and selection texts.** Reads the text symbols (TEXT-001…), selection texts or headings of a program, class or function group.",
   sql_query: "**ABAP SQL query.** Runs an ABAP SQL SELECT (WHERE, JOIN, ORDER BY, subqueries) through ADT data preview, with personal columns masked and row caps on production-data systems.",
@@ -60,6 +61,7 @@ export const TOOLS_EN: Record<string, string> = {
   transport_source_check: "**Transport code against the target.** Compares the code of a transport's objects with the target: objects missing there (R3.4) and version drift — signatures, fields or parameters that differ and don't travel in the transport (R3.5).",
   sap_systems: "**SAP systems and available tools.** Lists the configured systems (role, writes, data class, modules) and, optionally, checks connectivity and which tools work on each.",
   report_gap: "**Record a missing tool.** Records a need no tool covers (e.g. something you had to do manually in a transaction), to decide what to build next.",
+  close_gap: "**Close a recorded gap.** Marks a gap recorded with report_gap as resolved, with a note (a tool now covers it, or the note turned out to be wrong); nothing is deleted.",
   usage_stats: "**Tool usage and gaps.** Summary of the local log: calls per tool, failure rate and type, systems, and the gaps recorded with report_gap.",
 };
 

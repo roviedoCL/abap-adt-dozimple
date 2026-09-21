@@ -111,3 +111,26 @@ export function decideTransport(lock: LockInfo, requested: string | undefined, l
   if (!req) return { ok: false, reason: "El objeto no es local: indica transport (la orden donde debe ir el cambio)." };
   return { ok: true, corrNr: req, note: `Se guarda en ${req}.` };
 }
+
+/**
+ * Lo que conviene saber de una orden ANTES de escribir en ella. Cada aviso corresponde a un daño real: una orden
+ * sin sistema destino no viaja (lo guardado se queda en desarrollo) y una orden ajena mezcla el cambio con el
+ * trabajo de otra persona. Si se da una tarea, se mira también su orden.
+ */
+export async function transportWarnings(sap: SapConnection, trkorr: string, myUser: string): Promise<string[]> {
+  const heads = await orderHeaders(sap, [trkorr]);
+  const h = heads.get(trkorr);
+  if (!h) return [`${trkorr} no existe en este sistema.`];
+  const order = h.parent ? (await orderHeaders(sap, [h.parent])).get(h.parent) ?? h : h;
+  const out: string[] = [];
+  const me = myUser.trim().toUpperCase();
+  if (!isOpen(h.trstatus)) out.push(`${trkorr} no está modificable (${TRSTATUS[h.trstatus] ?? h.trstatus}).`);
+  if (order !== h && !isOpen(order.trstatus)) out.push(`Su orden ${order.trkorr} no está modificable (${TRSTATUS[order.trstatus] ?? order.trstatus}).`);
+  if (!order.tarsystem?.trim() && order.trfunction !== "T") {
+    out.push(`SIN SISTEMA DESTINO: ${order.trkorr} no tiene destino de transporte; lo que se guarde en ella no viajará a calidad ni a productivo.`);
+  }
+  for (const x of order === h ? [h] : [h, order]) {
+    if (x.owner && x.owner.trim().toUpperCase() !== me) out.push(`${x.trkorr} es de ${x.owner}, no del usuario de esta conexión: el cambio se mezclaría con su trabajo.`);
+  }
+  return out;
+}

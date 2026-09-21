@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ToolError } from "../../core/errors.js";
 import { resolveObject, TYPE_HELP } from "../../core/objects.js";
+import { transportWarnings } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 
 export default defineTool({
@@ -25,12 +26,15 @@ export default defineTool({
     if (obj.packageName.startsWith("$")) throw new ToolError("INPUT", `${obj.name} es local (${obj.packageName}): no necesita orden.`);
     return `Se creará una orden workbench nueva:\n  Texto: «${text}»\n  Paquete: ${obj.packageName} (de ${obj.name})\n  Capa: ${transport_layer ?? "la del paquete"}\nNo se libera nada.`;
   },
-  async run({ object_name, object_type, text, transport_layer }, { sap }) {
+  async run({ object_name, object_type, text, transport_layer }, { sap, system }) {
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
     if (!obj.packageName) throw new ToolError("INPUT", `No se pudo determinar el paquete de ${obj.name}.`);
     if (obj.packageName.startsWith("$")) throw new ToolError("INPUT", `${obj.name} es local (${obj.packageName}): no necesita orden.`);
     const tr = await c.createTransport(obj.uri, text, obj.packageName, transport_layer);
-    return `Orden ${tr} creada («${text}») para el paquete ${obj.packageName}. Úsala en write_source(transport=${tr}).`;
+    const warn = await transportWarnings(sap, tr, system.user).catch(() => [] as string[]);
+    const base = `Orden ${tr} creada («${text}») para el paquete ${obj.packageName}.`;
+    if (warn.length) return { text: `${base}\n\nAVISOS:\n${warn.map((w) => "  ⚠ " + w).join("\n")}\n\nRevísala en SE01 antes de guardar nada en ella.`, isError: true };
+    return `${base} Tiene sistema destino. Úsala en write_source(transport=${tr}).`;
   },
 });
