@@ -18,7 +18,11 @@ export interface UsageRecord {
   system?: string;
   ms: number;
   ok: boolean;
-  kind?: ErrorKind;
+  /**
+   * Tipo de fallo. "RESULT" = la tool funcionó y el resultado es negativo (sintaxis con errores, tests en rojo,
+   * activación rechazada): no es un fallo del servidor y no debe contarse como tal.
+   */
+  kind?: ErrorKind | "RESULT";
 }
 
 export interface GapRecord {

@@ -44,14 +44,19 @@ const usageStats = defineTool({
     const byTool = new Map<string, UsageRecord[]>();
     for (const u of usage) byTool.set(u.tool, [...(byTool.get(u.tool) ?? []), u]);
     if (byTool.size) {
-      out.push("", "tool\tllamadas\tfallos\tms medio\tfallos por tipo");
+      // Resultado negativo (RESULT) ≠ fallo: «la sintaxis tiene errores» es la tool funcionando. Los registros antiguos
+      // sin tipo y con isError son, por construcción del registro, resultados negativos.
+      const negative = (r: UsageRecord) => !r.ok && (r.kind === "RESULT" || r.kind === undefined);
+      out.push("", "tool\tllamadas\tfallos\tresultados negativos\tms medio\tfallos por tipo");
       for (const [tool, rs] of [...byTool].sort((a, b) => b[1].length - a[1].length)) {
-        const fails = rs.filter((r) => !r.ok);
+        const fails = rs.filter((r) => !r.ok && !negative(r));
+        const neg = rs.filter(negative).length;
         const kinds = new Map<string, number>();
-        for (const f of fails) kinds.set(f.kind ?? "?", (kinds.get(f.kind ?? "?") ?? 0) + 1);
+        for (const f of fails) kinds.set(f.kind!, (kinds.get(f.kind!) ?? 0) + 1);
         const avg = Math.round(rs.reduce((a, r) => a + r.ms, 0) / rs.length);
-        out.push(`${tool}\t${rs.length}\t${fails.length}\t${avg}\t${[...kinds].map(([k, n]) => `${k}:${n}`).join(" ")}`);
+        out.push(`${tool}\t${rs.length}\t${fails.length}\t${neg}\t${avg}\t${[...kinds].map(([k, n]) => `${k}:${n}`).join(" ")}`);
       }
+      out.push("", "Resultados negativos = la tool funcionó y el resultado fue «no» (sintaxis con errores, tests en rojo, activación rechazada).");
     }
     if (gaps.length) {
       out.push("", "Huecos (más recientes primero):");

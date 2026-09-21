@@ -3,7 +3,7 @@ import { textElementsUrl, type ADTClient, type TextElement } from "abap-adt-api"
 import { ToolError } from "../../core/errors.js";
 import { resolveObject, TYPE_HELP, type ResolvedObject } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
-import { decideTransport, orderHeaders } from "../../core/transport.js";
+import { decideTransport, orderHeaders, transportWarnings } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 
 const CATEGORIES = ["symbols", "selections", "headings"] as const;
@@ -61,7 +61,7 @@ const write = defineTool({
     elements: z.array(z.object({ id: z.string().min(1).max(8), text: z.string(), max_length: z.number().int().min(1).max(255).optional() })).min(1),
     transport: z.string().optional(),
   },
-  async preview({ object_name, object_type, category, elements, transport }, { sap }) {
+  async preview({ object_name, object_type, category, elements, transport }, { sap, system }) {
     const requested = transport ? assertTrkorr(transport) : undefined;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
@@ -75,7 +75,9 @@ const write = defineTool({
       if (prev.text === now.text && prev.maxLength === now.maxLength) return `  = ${id}  sin cambio`;
       return `  ~ ${id}  «${prev.text}» → «${now.text}»  [máx ${now.maxLength}]`;
     });
+    const warn = requested ? await transportWarnings(sap, requested, system.user) : [];
     return [
+      ...(warn.length ? [`AVISOS DE LA ORDEN ${requested}:`, ...warn.map((w) => "  ⚠ " + w), ""] : []),
       `${obj.name} (${obj.type}) · ${category} · orden ${requested ?? "ninguna indicada"}`,
       `Quedarán ${merged.size} (hoy ${current.length}); no se borra ninguno.`,
       ...lines,

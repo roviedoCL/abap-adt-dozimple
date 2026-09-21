@@ -4,7 +4,7 @@ import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
 import { CLASS_INCLUDES, resolveObject, sourceUrl, TYPE_HELP } from "../../core/objects.js";
 import { diffLines, unified } from "../../core/diff.js";
 import { assertTrkorr } from "../../core/policy.js";
-import { decideTransport, orderHeaders } from "../../core/transport.js";
+import { decideTransport, orderHeaders, transportWarnings } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
 
 export default defineTool({
@@ -25,7 +25,7 @@ export default defineTool({
     activate: z.boolean().default(true),
     skip_syntax_check: z.boolean().default(false),
   },
-  async preview({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap }) {
+  async preview({ object_name, object_type, include, source, transport, activate, skip_syntax_check }, { sap, system }) {
     const requested = transport ? assertTrkorr(transport) : undefined;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
@@ -35,6 +35,11 @@ export default defineTool({
       `${obj.name} (${obj.type})${include !== "main" ? ` · include ${include}` : ""} · paquete ${obj.packageName ?? "?"}`,
       `Orden: ${requested ?? "ninguna indicada (solo vale para objetos locales)"} · activar después: ${activate ? "sí" : "no"}`,
     ];
+    // Los avisos de la orden van arriba: son lo que más daño hace si se pasa por alto.
+    if (requested) {
+      const warn = await transportWarnings(sap, requested, system.user);
+      out.push(warn.length ? `⚠ AVISOS DE LA ORDEN ${requested}:\n${warn.map((w) => "  ⚠ " + w).join("\n")}` : `Orden ${requested}: modificable, con destino y del usuario de esta conexión.`);
+    }
     if (skip_syntax_check) out.push("Sintaxis: NO se comprobará (skip_syntax_check=true).");
     else {
       const msgs = await syntaxCheck(c, obj, url, source);

@@ -24,10 +24,37 @@ export interface AtcRunOutcome {
   findings: AtcFindingRef[];
 }
 
-/** Último ATC por sistema, para que atc_quickfix pueda referirse a «el hallazgo 3». */
-const lastRun = new Map<string, AtcRunOutcome>();
-export const rememberRun = (systemId: string, r: AtcRunOutcome) => lastRun.set(systemId.toUpperCase(), r);
-export const recallRun = (systemId: string) => lastRun.get(systemId.toUpperCase());
+/**
+ * ATC recordados por sistema Y alcance (objeto u orden), para que «el hallazgo 3» sea siempre del objeto que se
+ * nombra. Antes se recordaba solo el último por sistema, y explain/finding sobre un objeto devolvían el hallazgo de
+ * otro objeto analizado antes: con apariencia correcta, que es lo peor.
+ */
+const runs = new Map<string, AtcRunOutcome>();
+const lastScope = new Map<string, string>();
+const MAX_RUNS = 100;
+
+export const objectScope = (name: string) => `OBJ:${name.trim().toUpperCase()}`;
+export const transportScope = (trkorr: string) => `TR:${trkorr.trim().toUpperCase()}`;
+
+export function rememberRun(systemId: string, scopeKey: string, r: AtcRunOutcome): void {
+  const k = `${systemId.toUpperCase()}|${scopeKey}`;
+  runs.delete(k); // reinsertar = más reciente
+  runs.set(k, r);
+  if (runs.size > MAX_RUNS) runs.delete(runs.keys().next().value!);
+  lastScope.set(systemId.toUpperCase(), scopeKey);
+}
+
+/** ATC de ese alcance; sin alcance, el último del sistema (quien llama debe decir de qué objeto es). */
+export function recallRun(systemId: string, scopeKey?: string): AtcRunOutcome | undefined {
+  const key = scopeKey ?? lastScope.get(systemId.toUpperCase());
+  return key ? runs.get(`${systemId.toUpperCase()}|${key}`) : undefined;
+}
+
+/** «hace 3 min» para que se vea si el resultado recordado es de hace un rato. */
+export function runAge(r: AtcRunOutcome, now = Date.now()): string {
+  const min = Math.max(0, Math.round((now - Date.parse(r.at)) / 60_000));
+  return min < 1 ? "hace menos de 1 min" : `hace ${min} min`;
+}
 
 export async function defaultVariant(c: ADTClient): Promise<string> {
   const cust = await c.atcCustomizing();

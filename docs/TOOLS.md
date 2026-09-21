@@ -121,7 +121,7 @@ Dice, ANTES de modificar un objeto, en qué orden acabará el cambio y por qué:
 
 ### `run_atc` — Ejecutar ATC
 
-Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos numerados (prioridad, línea, check, mensaje), con los totales P1/P2/P3 que da SAP. El resultado queda recordado: atc_quickfix(finding=N) trabaja sobre el hallazgo N y explain=N trae la documentación del check (nota SAP, supresión) sin re-ejecutar.
+Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos numerados (prioridad, línea, check, mensaje), con los totales P1/P2/P3 que da SAP. El resultado queda recordado POR OBJETO U ORDEN: explain=N con object_name (o transport) trae la documentación del hallazgo N de ESE objeto (nota SAP, supresión) sin re-ejecutar si ya se analizó, y lo ejecuta si no. atc_quickfix(finding=N) usa la misma memoria.
 
 | | |
 |---|---|
@@ -139,7 +139,7 @@ Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos n
 | `priorities` | lista de number |  | Filtrar la lista, p. ej. [1,2] |
 | `max_findings` | number | 200 |  |
 | `include_exempted` | boolean | false |  |
-| `explain` | number |  | Documentación del hallazgo N del último ATC (no re-ejecuta) |
+| `explain` | number |  | Documentación del hallazgo N del ATC del objeto u orden indicados (sin ellos: del último ATC, y lo dice) |
 
 \* obligatorio
 
@@ -156,7 +156,8 @@ Correcciones que SAP ofrece (las mismas de Ctrl+1 en Eclipse) para un hallazgo A
 | Parámetro | Tipo | Por defecto | Descripción |
 |---|---|---|---|
 | `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
-| `finding` | number |  | Número de hallazgo del último run_atc en este sistema |
+| `finding` | number |  | Número de hallazgo del run_atc de object_name (o transport); sin ellos, del último run_atc del sistema |
+| `transport` | string |  | Con finding: el hallazgo es del run_atc de esta orden |
 | `object_name` | string |  |  |
 | `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB. También vale el tipo ADT (p. ej. PROG/P). |
 | `line` | number |  |  |

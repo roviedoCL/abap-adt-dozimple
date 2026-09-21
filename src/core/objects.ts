@@ -1,5 +1,6 @@
 import { ADTClient, type AbapClassStructure, type SearchResult } from "abap-adt-api";
 import { ToolError } from "./errors.js";
+import { addNote } from "./notes.js";
 
 /**
  * Tipos cortos que entiende la tool → tipo ADT (TADIR/WB). También se acepta
@@ -40,6 +41,28 @@ export function adtType(t?: string): string | undefined {
   return mapped;
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  "PROG/P": "programa",
+  "PROG/I": "include",
+  "TABL/DT": "tabla",
+  "TABL/DS": "estructura",
+  "FUGR/F": "grupo de funciones",
+  "FUGR/FF": "módulo de función",
+  "CLAS/OC": "clase",
+  "INTF/OI": "interfaz",
+};
+
+/**
+ * Mismo objeto con otro subtipo: misma familia (4 primeras letras). Los grupos de funciones nunca: un grupo y un
+ * módulo son objetos distintos, y confundirlos cambia qué se lee o se escribe.
+ */
+export function compatibleType(requested: string, actual: string): boolean {
+  const fam = (t: string) => t.slice(0, 4);
+  if (fam(requested) !== fam(actual)) return false;
+  if (fam(requested) === "FUGR") return requested === actual;
+  return true;
+}
+
 export interface ResolvedObject {
   name: string;
   type: string;
@@ -61,8 +84,24 @@ export async function resolveObject(c: ADTClient, name: string, type?: string): 
   if (at && !hits.some((h) => h["adtcore:name"].toUpperCase() === wanted)) {
     hits = await c.searchObject(wanted, undefined, 100);
   }
-  let exact = hits.filter((h) => h["adtcore:name"].toUpperCase() === wanted);
-  if (at) exact = exact.filter((h) => h["adtcore:type"].toUpperCase().startsWith(at));
+  const sameName = hits.filter((h) => h["adtcore:name"].toUpperCase() === wanted);
+  let exact = at ? sameName.filter((h) => h["adtcore:type"].toUpperCase().startsWith(at)) : sameName;
+  if (exact.length === 0 && at && sameName.length) {
+    // El nombre existe con otro subtipo de la misma familia (PROG → include PROG/I, TABL → estructura TABL/DS):
+    // con UNA sola candidata se resuelve y se deja constancia; con varias, se sigue pidiendo el tipo.
+    const compatible = sameName.filter((h) => compatibleType(at, h["adtcore:type"].toUpperCase()));
+    if (compatible.length === 1) {
+      const t = compatible[0]["adtcore:type"].toUpperCase();
+      addNote(`se pidió ${type!.toUpperCase()} ${wanted}; en el sistema es ${t}${TYPE_LABEL[t] ? ` (${TYPE_LABEL[t]})` : ""} y se usó ese.`);
+      exact = compatible;
+    } else if (at === "FUGR/FF" && sameName.some((h) => h["adtcore:type"].toUpperCase() === "FUGR/F")) {
+      throw new ToolError(
+        "NOT_FOUND",
+        `${wanted} es un grupo de funciones (FUGR/F), no un módulo de función.`,
+        `Sus módulos: function_modules(group="${wanted}"). El nombre del módulo suele diferir del del grupo.`,
+      );
+    }
+  }
   if (exact.length === 0) {
     const near = hits.slice(0, 8).map((h) => `${h["adtcore:name"]} (${h["adtcore:type"]})`);
     throw new ToolError(
