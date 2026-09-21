@@ -87,7 +87,8 @@ const rules = [
   { name: "token de npm", re: /\bnpm_[A-Za-z0-9]{36}\b|_authToken\s*=\s*\S{8,}/ },
   { name: "JWT", re: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/ },
   { name: "cadena de conexión con clave", re: /\b(AccountKey|SharedAccessKey|Password|Pwd)=[^;"'\s]{8,}/i, allow: /<|\$\{|env:/ },
-  { name: "webhook con secreto", re: /hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+|discord(app)?\.com\/api\/webhooks\/\d+\/[\w-]+/ },
+  // Anclado a un límite (inicio o carácter que no forma parte de un nombre de host): «evilhooks.slack.com» no cuenta.
+  { name: "webhook con secreto", re: /(?:^|[^A-Za-z0-9.-])(?:hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+|discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+)/ },
   { name: "cabecera Authorization con valor", re: /authorization["']?\s*[:=]\s*["'](Basic|Bearer)\s+[A-Za-z0-9+/=._-]{12,}/i },
   { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{|secreto/ },
   {
