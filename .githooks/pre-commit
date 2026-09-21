@@ -1,3 +1,5 @@
 #!/bin/sh
-# Bloquea el commit si entra alguna credencial o dato de cliente.
-exec node scripts/scan-sensitive.mjs --staged
+# Antes de cada commit: revisa el CÓDIGO COMPLETO (todo el árbol, también lo no preparado) y el contenido exacto que
+# entra en el commit. Credenciales, direcciones (IPs, hosts internos o de SAP) y datos de clientes bloquean el commit.
+# Activarlo una vez por clon: git config core.hooksPath .githooks   (o: npm run hooks)
+exec node scripts/scan-sensitive.mjs --commit

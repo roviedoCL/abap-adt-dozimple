@@ -1,0 +1,4 @@
+#!/bin/sh
+# Antes de cada push: revisa todas las líneas añadidas en todo el historial (todas las ramas). Lo que ya se commiteó
+# y se va a publicar, aunque después se haya borrado del archivo, también cuenta.
+exec node scripts/scan-sensitive.mjs --history

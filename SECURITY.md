@@ -27,7 +27,7 @@ aplicaciones LLM, riesgos residuales): **[docs/THREAT_MODEL.md](docs/THREAT_MODE
 | Dependencias | Vulnerabilidades o código malicioso | 4 dependencias de producción con versión exacta y lockfile; `ignore-scripts` (sin scripts de instalación); `npm audit` y `npm audit signatures` (firmas y procedencia) en CI; SBOM CycloneDX como artefacto de cada build; acciones de CI fijadas por commit; Dependabot |
 | Terceros | Un MCP externo con acceso a credenciales | Solo como proceso hijo aislado, tras revisión, con entorno mínimo; sus tools pasan por la política de este servidor |
 | Estado local | Lectura por otros usuarios del equipo | Carpetas `700`, archivos `600`; el registro de uso no guarda argumentos |
-| Repositorio | Credenciales o datos de clientes en el historial | `scripts/scan-sensitive.mjs` en `pre-commit` y en CI; los términos prohibidos se leen de la configuración local, nunca se listan en el repo; secret scanning con push protection |
+| Repositorio | Credenciales, direcciones (IPs, hosts internos o de SAP) o datos de clientes en el código o en el historial | [Procedimiento en cada commit](docs/COMMIT_SECURITY.md): `pre-commit` revisa el código completo más lo preparado; `pre-push` y CI revisan todo el historial; `main` exige el CI; secret scanning con push protection. Los términos de clientes se leen de la configuración local, nunca se listan en el repo |
 
 ## Recomendaciones de despliegue
 
