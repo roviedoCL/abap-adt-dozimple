@@ -8,7 +8,9 @@ const run = promisify(execFile);
 /** Servicio del llavero de macOS bajo el que se guardan las contraseñas. */
 export const KEYCHAIN_SERVICE = "abap-adt-dozimple";
 
-const cache = new Map<string, string>();
+/** Contraseñas en memoria con caducidad: sin caché el llavero se leería en cada petición; sin límite, vivirían siempre. */
+const CACHE_TTL_MS = 15 * 60_000;
+const cache = new Map<string, { pwd: string; exp: number }>();
 
 /**
  * Devuelve la contraseña del sistema. Nunca se escribe en logs ni en la
@@ -16,7 +18,8 @@ const cache = new Map<string, string>();
  */
 export async function getPassword(s: SystemConfig): Promise<string> {
   const hit = cache.get(s.id);
-  if (hit) return hit;
+  if (hit && hit.exp > Date.now()) return hit.pwd;
+  cache.delete(s.id);
 
   let pwd: string | undefined;
   if (s.password.startsWith("env:")) {
@@ -40,11 +43,16 @@ export async function getPassword(s: SystemConfig): Promise<string> {
       );
     }
   }
-  cache.set(s.id, pwd);
+  cache.set(s.id, { pwd, exp: Date.now() + CACHE_TTL_MS });
   return pwd;
 }
 
 /** Tras un 401 conviene olvidar la contraseña cacheada por si se cambió. */
 export function forgetPassword(id: string): void {
   cache.delete(id);
+}
+
+/** Al cerrar el servidor: ninguna contraseña queda en memoria más de lo necesario. */
+export function clearPasswords(): void {
+  cache.clear();
 }

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { htmlToText, parseAtom } from "../../core/feeds.js";
 import { ToolError } from "../../core/errors.js";
 import { budget } from "../../core/output.js";
+import { SAP_USER_RE } from "../../core/policy.js";
 import { defineTool } from "../../core/tool.js";
 
 export default defineTool({
@@ -14,7 +15,7 @@ export default defineTool({
   access: "read",
   requires: { adt: ["/sap/bc/adt/gw/errorlog"] },
   input: {
-    user: z.string().optional(),
+    user: z.string().regex(SAP_USER_RE, "usuario SAP: letras, números y _ . @ -, hasta 12").optional(),
     max: z.number().int().min(1).max(200).default(20),
     detail: z.number().int().min(1).optional().describe("Número de la lista para ver el detalle"),
   },

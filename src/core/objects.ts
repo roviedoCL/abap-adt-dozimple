@@ -157,6 +157,16 @@ export async function resolveByTypePrefix(c: ADTClient, name: string, prefixes: 
   return h ? { uri: h["adtcore:uri"], type: h["adtcore:type"] } : undefined;
 }
 
+/**
+ * Nombre de objeto apto para una ruta ADT. encodeURIComponent no codifica «.», así que «..» sobreviviría y
+ * recorrería la ruta; un nombre de repositorio ABAP solo tiene letras, dígitos, «_», «$» y namespaces «/X/».
+ */
+export function adtPathName(name: string): string {
+  const n = name.trim();
+  if (!/^(\/[A-Za-z0-9_]+\/)?[A-Za-z0-9_$]{1,40}$/.test(n)) throw new ToolError("INPUT", `Nombre de objeto inválido para una ruta ADT: ${name}`);
+  return encodeURIComponent(n.toLowerCase());
+}
+
 /** Escapa un literal para ABAP SQL. */
 export function sqlLiteral(v: string): string {
   return `'${v.replace(/'/g, "''")}'`;

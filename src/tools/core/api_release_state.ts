@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ToolError } from "../../core/errors.js";
 import { resolveObject, TYPE_HELP } from "../../core/objects.js";
 import { defineTool } from "../../core/tool.js";
 
@@ -42,6 +43,10 @@ export default defineTool({
   async run({ object_name, object_type }, { sap }) {
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
+    // La URI viene de SAP: se exige la forma de una URI ADT, sin «..», antes de meterla en otra ruta.
+    if (!/^\/sap\/bc\/adt\/[A-Za-z0-9_$%/.-]+$/.test(obj.uri) || obj.uri.split("/").includes("..")) {
+      throw new ToolError("INPUT", `URI de objeto inesperada: ${obj.uri}`);
+    }
     const r = await c.httpClient.request(`/sap/bc/adt/apireleases/${encodeURIComponent(obj.uri)}`, {
       headers: { Accept: "application/vnd.sap.adt.apirelease.v10+xml" },
     });

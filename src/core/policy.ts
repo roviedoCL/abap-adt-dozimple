@@ -143,6 +143,12 @@ export function assertPublicQuery(query: string, cfg: Config, blockTerms: string
   }
 }
 
+/**
+ * Usuario SAP: hasta 12 caracteres (USR02-BNAME). Se interpola en filtros de feeds ADT (dumps, errores de Gateway):
+ * paréntesis, comas o espacios podrían reescribir la expresión del filtro, así que solo se admite esta forma.
+ */
+export const SAP_USER_RE = /^[A-Za-z0-9_.@-]{1,12}$/;
+
 export const TRKORR_RE = /^[A-Z0-9]{3}K\d{6}$/;
 
 export function assertTrkorr(t: string, label = "transport"): string {

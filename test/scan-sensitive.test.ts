@@ -73,6 +73,19 @@ describe("escáner: credenciales", () => {
   });
 });
 
+describe("escáner: excepciones", () => {
+  it("un comentario en la misma línea no salva una contraseña real (la excepción mira el fragmento, no la línea)", () => {
+    put("src/p.ts", `const pwd = "${"q".repeat(10)}"; // en prod usa keychain\n`);
+    const r = scan();
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("contraseña en claro");
+  });
+  it("las referencias legítimas siguen permitidas", () => {
+    put("src/ok.ts", 'password: "keychain"\npassword: "env:SAP_PWD"\npassword: "<tu clave>"\n');
+    expect(scan()).toMatchObject({ code: 0 });
+  });
+});
+
 describe("escáner: direcciones", () => {
   it("detecta IPs privadas y públicas, hosts SAP con puerto y dominios internos", () => {
     put("a.md", `servidor ${FAKE.privateIp}\n`);

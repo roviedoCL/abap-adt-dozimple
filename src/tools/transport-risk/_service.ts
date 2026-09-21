@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { SystemConfig } from "../../core/config.js";
 import { tlsOptions } from "../../core/connection.js";
 import { getPassword } from "../../core/credentials.js";
-import { ToolError } from "../../core/errors.js";
+import { sanitizeMessage, ToolError } from "../../core/errors.js";
 import type { ToolResult } from "../../core/tool.js";
 
 /**
@@ -38,6 +38,11 @@ export async function callRiskService(system: SystemConfig, params: Record<strin
     auth: { username: system.user, password: await getPassword(system) },
     httpsAgent: tlsOptions(system).httpsAgent ?? new https.Agent(),
     timeout: 180_000,
+    // Un servicio ICF de solo lectura no redirige: sin redirecciones, las credenciales Basic nunca viajan a otra URL
+    // (sin depender de que una librería transitiva las quite al cambiar de host).
+    maxRedirects: 0,
+    // Tope de tamaño de la respuesta antes de procesarla (un sistema averiado no agota la memoria del proceso).
+    maxContentLength: 50 * 1024 * 1024,
     // Los 4xx/5xx traen un JSON con la causa: se lee en vez de lanzar.
     validateStatus: () => true,
     responseType: "text",
@@ -63,7 +68,7 @@ export async function callRiskService(system: SystemConfig, params: Record<strin
   if (response.status === 404) return { text: `El servicio ${RISK_SERVICE_PATH} no existe en este sistema.\n${BACKEND_HINT}`, isError: true };
   if (response.status !== 200) {
     const detail = json && typeof json === "object" && "error" in json ? String(json.error) : body;
-    return { text: `El servicio de riesgo respondió HTTP ${response.status}: ${detail}`, isError: true };
+    return { text: `El servicio de riesgo respondió HTTP ${response.status}: ${sanitizeMessage(detail, 300)}`, isError: true };
   }
   return body;
 }

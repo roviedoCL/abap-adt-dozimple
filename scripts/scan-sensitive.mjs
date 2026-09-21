@@ -90,7 +90,7 @@ const rules = [
   // Anclado a un límite (inicio o carácter que no forma parte de un nombre de host): «evilhooks.slack.com» no cuenta.
   { name: "webhook con secreto", re: /(?:^|[^A-Za-z0-9.-])(?:hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+|discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+)/ },
   { name: "cabecera Authorization con valor", re: /authorization["']?\s*[:=]\s*["'](Basic|Bearer)\s+[A-Za-z0-9+/=._-]{12,}/i },
-  { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{|secreto/ },
+  { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{/ },
   {
     name: "secreto asignado",
     re: /\b(api[_-]?key|secret|client[_-]?secret|access[_-]?token|auth[_-]?token|private[_-]?key)["']?\s*[:=]\s*["'][A-Za-z0-9+/=_-]{16,}["']/i,
@@ -147,8 +147,14 @@ function scanText(where, text, lineOffset = 0) {
   text.split("\n").forEach((line, i) => {
     const l = stripOwn(line);
     for (const r of rules) {
-      const hit = r.test ? r.test(l) : r.re.test(l);
-      if (hit && !(r.allow && r.allow.test(l))) report(`${where}:${i + 1 + lineOffset}`, r.name);
+      if (r.test) {
+        if (r.test(l)) report(`${where}:${i + 1 + lineOffset}`, r.name);
+        continue;
+      }
+      // La excepción se evalúa sobre el FRAGMENTO detectado, no sobre la línea: un comentario «usa keychain» en la
+      // misma línea no puede salvar una contraseña real.
+      const m = r.re.exec(l);
+      if (m && !(r.allow && r.allow.test(m[0]))) report(`${where}:${i + 1 + lineOffset}`, r.name);
     }
   });
 }

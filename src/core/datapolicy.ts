@@ -1,7 +1,7 @@
 import type { SystemConfig } from "./config.js";
 import type { SapConnection } from "./connection.js";
 import { normalizeError, ToolError } from "./errors.js";
-import { sqlLiteral } from "./objects.js";
+import { adtPathName, sqlLiteral } from "./objects.js";
 import { assertNotSensitive, assertSelectOnly, rejectSensitive, sensitiveHits, sqlWords } from "./policy.js";
 
 /**
@@ -130,7 +130,7 @@ export async function assertNoSensitiveViews(sap: SapConnection, sql: string, de
         for (const [ddl, objs] of byDdl) {
           let src: string;
           try {
-            src = await c.getObjectSource(`/sap/bc/adt/ddic/ddl/sources/${encodeURIComponent(ddl.toLowerCase())}/source/main`);
+            src = await c.getObjectSource(`/sap/bc/adt/ddic/ddl/sources/${adtPathName(ddl)}/source/main`);
           } catch (e) {
             throw new ToolError("POLICY", `No se pudo comprobar qué tablas lee la CDS ${ddl} (${normalizeError(e).message}): la consulta no se ejecuta sin esa comprobación.`);
           }
