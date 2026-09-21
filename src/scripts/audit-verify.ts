@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AUDIT_FILE, verifyAudit, type AuditEntry } from "../core/audit.js";
+import { auditKey } from "../core/auditkey.js";
 import { stateDir } from "../core/telemetry.js";
 
 /**
@@ -15,7 +16,9 @@ if (!existsSync(path)) {
   process.exit(0);
 }
 const text = readFileSync(path, "utf8");
-const v = verifyAudit(text);
+// La clave NO se crea al verificar: si no existe, se verifica solo la cadena y se dice.
+const key = auditKey(false);
+const v = verifyAudit(text, key);
 if (!v.ok) {
   console.error(`REGISTRO ALTERADO en la entrada ${v.brokenAt} de ${v.entries}: ${v.reason} (${path}).`);
   process.exit(1);
@@ -26,6 +29,11 @@ const by = (k: string) => writes.filter((e) => e.confirmedBy === k).length;
 const denied = entries.filter((e) => e.phase === "denied").length;
 const last = entries.at(-1);
 console.log(`Registro íntegro: ${v.entries} entradas encadenadas (${path}).`);
+console.log(
+  key
+    ? `Firma HMAC (clave del llavero, creada ${key.created}): ${v.signed} entradas firmadas y válidas; las anteriores a la clave, solo encadenadas.`
+    : "Sin clave de firma en el almacén de secretos: solo se verifica la cadena (una reescritura completa no se detectaría).",
+);
 console.log(
   `Escrituras: ${writes.length} · confirmadas por elicitación (una persona respondió en el cliente): ${by("elicitation")} · ` +
     `por token (garantía de aviso: el cliente debe no autoaprobar): ${by("token")} · denegadas: ${denied}.`,

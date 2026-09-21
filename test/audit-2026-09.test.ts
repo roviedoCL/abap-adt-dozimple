@@ -2,13 +2,15 @@
  * Regresión de la auditoría de seguridad del 21-09-2026 (hallazgos DZ-xx). Cada test reproduce el ataque o el mal
  * uso descrito en el informe y exige que el servidor lo frene.
  */
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { appendAudit, AUDIT_FILE, verifyAudit } from "../src/core/audit.js";
-import { parseConfig, startupWarnings } from "../src/core/config.js";
+import { aclViolations, assertPrivateFileWindows, parseAclOutput, parseConfig, startupWarnings } from "../src/core/config.js";
+import { auditKey, resetAuditKeyForTests } from "../src/core/auditkey.js";
 import { stateOf } from "../src/core/confirm.js";
 import { clearPasswords, getPassword } from "../src/core/credentials.js";
 import { maskPii, MASK } from "../src/core/datapolicy.js";
@@ -84,9 +86,15 @@ describe("DZ-07/10 · TLS y avisos de arranque", () => {
     const dev = parseConfig({ systems: [{ ...base, id: "D", role: "DEV", allowSelfSigned: true }] });
     expect(startupWarnings(dev, "darwin").join(" ")).toMatch(/D: TLS SIN VERIFICAR/);
   });
-  it("en Windows avisa de que los permisos no se comprueban", () => {
+  it("en Windows solo avisa si se desactivó la comprobación de ACL", () => {
     const c = parseConfig({ systems: [{ ...base, id: "D", role: "DEV" }] });
-    expect(startupWarnings(c, "win32").join(" ")).toMatch(/Windows: no se comprueban/);
+    expect(startupWarnings(c, "win32")).toEqual([]);
+    process.env.ABAP_DZ_SKIP_ACL_CHECK = "1";
+    try {
+      expect(startupWarnings(c, "win32").join(" ")).toMatch(/ABAP_DZ_SKIP_ACL_CHECK=1 desactiva/);
+    } finally {
+      delete process.env.ABAP_DZ_SKIP_ACL_CHECK;
+    }
     expect(startupWarnings(c, "linux")).toEqual([]);
   });
 });
@@ -225,4 +233,89 @@ it("DZ-01/02 · el esquema de dumps y gateway_errors rechaza un usuario hostil",
     expect(schema.safeParse({ user: "X ) ) or( equals( user, ADMIN )" }).success, name).toBe(false);
     expect(schema.safeParse({ user: "DEMO_USER" }).success, name).toBe(true);
   }
+});
+
+describe("DZ-19 · registro de auditoría firmado con HMAC (clave en el llavero)", () => {
+  const e = (tool: string) => ({ phase: "result" as const, tool, access: "write", system: "DEV", sapUser: "U", client: "100", args: {} });
+  const read = () => readFileSync(join(dir, AUDIT_FILE), "utf8");
+  /** Lo que haría un atacante sin la clave: borrar una entrada y recalcular seq, prev y hash de todas. */
+  function rewriteWithout(text: string, drop: number, keepMac: boolean): string {
+    const lines = text.trim().split("\n").map((l) => JSON.parse(l)).filter((_: unknown, i: number) => i !== drop);
+    let prev = "0".repeat(64);
+    return lines
+      .map((x: any, i: number) => {
+        const { hash, mac, ...rest } = x;
+        const base = { ...rest, seq: i + 1, prev };
+        const h = createHash("sha256").update(JSON.stringify(base)).digest("hex");
+        prev = h;
+        return JSON.stringify(keepMac ? { ...base, hash: h, mac } : { ...base, hash: h });
+      })
+      .join("\n");
+  }
+
+  beforeEach(() => resetAuditKeyForTests());
+
+  it("cada entrada nueva va firmada y la verificación con clave las da por buenas", () => {
+    for (const t of ["a", "b", "c"]) appendAudit(e(t), dir);
+    const v = verifyAudit(read(), auditKey(false));
+    expect(v).toMatchObject({ ok: true, entries: 3, signed: 3 });
+  });
+
+  it("una reescritura completa sin la clave ya no pasa: firmas que no cuadran", () => {
+    for (const t of ["a", "b", "c"]) appendAudit(e(t), dir);
+    const forged = rewriteWithout(read(), 1, true);
+    expect(verifyAudit(forged).ok).toBe(true); // sin clave, la cadena sola no lo ve…
+    expect(verifyAudit(forged, auditKey(false))).toMatchObject({ ok: false, reason: expect.stringMatching(/firma HMAC inválida/) }); // …con clave, sí
+  });
+
+  it("quitar la firma de la PRIMERA entrada firmada también se detecta (fecha nunca anterior a la clave)", () => {
+    appendAudit(e("primera"), dir);
+    const [first] = read().trim().split("\n").map((l) => JSON.parse(l));
+    expect(first.ts >= auditKey(false)!.created).toBe(true);
+  });
+
+  it("quitar las firmas tampoco: toda entrada posterior a la clave tiene que llevarla", () => {
+    for (const t of ["a", "b"]) appendAudit(e(t), dir);
+    const stripped = rewriteWithout(read(), 99, false);
+    expect(verifyAudit(stripped, auditKey(false))).toMatchObject({ ok: false, reason: expect.stringMatching(/sin firma/) });
+  });
+
+  it("las entradas anteriores a la clave (registro antiguo) se aceptan solo encadenadas", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    process.env.ABAP_DZ_AUDIT_KEYSTORE = "none";
+    appendAudit(e("antigua"), dir);
+    vi.setSystemTime(Date.now() + 60_000); // la clave se crea después, como al actualizar un equipo con registro previo
+    process.env.ABAP_DZ_AUDIT_KEYSTORE = "memory";
+    resetAuditKeyForTests();
+    appendAudit(e("nueva"), dir);
+    expect(verifyAudit(read(), auditKey(false))).toMatchObject({ ok: true, entries: 2, signed: 1 });
+  });
+});
+
+describe("DZ-10 · permisos de systems.json en Windows (ACL por SID)", () => {
+  const ME = "S-1-5-21-1-2-3-1001";
+  const out = (aces: string[], owner = ME) => [`USER|${ME}`, `OWNER|${owner}`, ...aces.map((a) => `ACE|${a}`)].join("\r\n");
+
+  it("solo tu usuario y las identidades del sistema: pasa", () => {
+    const ok = out([`${ME}|FullControl|Allow`, "S-1-5-18|FullControl|Allow", "S-1-5-32-544|FullControl|Allow", "S-1-5-32-545|ReadAndExecute, Synchronize|Allow"]);
+    expect(() => assertPrivateFileWindows("C:\\\\demo\\\\systems.json", () => ok)).not.toThrow();
+    expect(aclViolations(parseAclOutput(ok).entries, ME)).toEqual([]);
+  });
+
+  it.each([
+    ["Everyone con modificación", "S-1-1-0|Modify, Synchronize|Allow"],
+    ["Usuarios con escritura", "S-1-5-32-545|Write, ReadAndExecute, Synchronize|Allow"],
+    ["Usuarios autenticados con control total genérico", "S-1-5-11|268435456|Allow"],
+  ])("rechaza %s", (_n, ace) => {
+    expect(() => assertPrivateFileWindows("C:\\\\demo\\\\systems.json", () => out([`${ME}|FullControl|Allow`, ace]))).toThrow(/lo pueden modificar otras identidades/);
+  });
+
+  it("una denegación no cuenta como permiso, y otro propietario sí se rechaza", () => {
+    expect(() => assertPrivateFileWindows("x", () => out([`${ME}|FullControl|Allow`, "S-1-1-0|Write|Deny"]))).not.toThrow();
+    expect(() => assertPrivateFileWindows("x", () => out([`${ME}|FullControl|Allow`], "S-1-5-21-9-9-9-500"))).toThrow(/pertenece a otra identidad/);
+  });
+
+  it("si no se pueden leer los permisos, no arranca (fail-closed)", () => {
+    expect(() => assertPrivateFileWindows("x", () => { throw new Error("powershell no disponible"); })).toThrow(/Sin esa comprobación no se arranca/);
+  });
 });

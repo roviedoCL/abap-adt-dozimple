@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { auditKey, macOf, type AuditKey } from "./auditkey.js";
 import { stateDir } from "./telemetry.js";
 
 /**
@@ -38,6 +39,8 @@ export interface AuditEntry extends Omit<AuditInput, "args"> {
   args: Record<string, unknown>;
   prev: string;
   hash: string;
+  /** HMAC-SHA256 del hash con la clave del llavero (ausente si no hay almacén de secretos). */
+  mac?: string;
 }
 
 /** E/S del registro, sustituible en tests para simular disco lleno o permisos. */
@@ -128,6 +131,9 @@ export function appendAudit(input: AuditInput, dir = stateDir()): AuditEntry {
 }
 
 function appendLocked(path: string, input: AuditInput): AuditEntry {
+  // La clave se obtiene (o se crea) ANTES de fechar la entrada: así la primera firmada nunca queda con una fecha
+  // anterior a la de la clave, y quitarle la firma no la hace pasar por una entrada antigua.
+  const key = auditKey(true);
   const prev = lastEntry(path);
   const base: Omit<AuditEntry, "hash"> = {
     seq: prev.seq + 1,
@@ -136,7 +142,8 @@ function appendLocked(path: string, input: AuditInput): AuditEntry {
     args: auditArgs(input.args),
     prev: prev.hash,
   };
-  const entry: AuditEntry = { ...base, hash: entryHash(base) };
+  const hash = entryHash(base);
+  const entry: AuditEntry = key ? { ...base, hash, mac: macOf(key.key, hash) } : { ...base, hash };
   auditIo.appendFileSync(path, JSON.stringify(entry) + "\n", { mode: 0o600 });
   return entry;
 }
@@ -146,12 +153,18 @@ export interface AuditVerdict {
   entries: number;
   brokenAt?: number;
   reason?: string;
+  /** Entradas con firma HMAC válida (solo si se verificó con clave). */
+  signed?: number;
 }
 
-/** Recorre la cadena completa: secuencia, enlace con la anterior y hash propio. */
-export function verifyAudit(text: string): AuditVerdict {
+/**
+ * Recorre la cadena completa: secuencia, enlace con la anterior y hash propio. Con la clave, además, la firma de cada
+ * entrada; y toda entrada posterior a la creación de la clave TIENE que estar firmada (quitar firmas no sirve).
+ */
+export function verifyAudit(text: string, key?: AuditKey | null): AuditVerdict {
   const lines = text.split("\n").filter(Boolean);
   let prev = GENESIS;
+  let signed = 0;
   for (let i = 0; i < lines.length; i++) {
     let e: AuditEntry;
     try {
@@ -159,11 +172,16 @@ export function verifyAudit(text: string): AuditVerdict {
     } catch {
       return { ok: false, entries: lines.length, brokenAt: i + 1, reason: "línea que no es JSON" };
     }
-    const { hash, ...rest } = e;
+    const { hash, mac, ...rest } = e;
     if (e.seq !== i + 1) return { ok: false, entries: lines.length, brokenAt: i + 1, reason: `secuencia ${e.seq}, se esperaba ${i + 1}` };
     if (e.prev !== prev) return { ok: false, entries: lines.length, brokenAt: i + 1, reason: "no enlaza con la entrada anterior" };
     if (entryHash(rest) !== hash) return { ok: false, entries: lines.length, brokenAt: i + 1, reason: "contenido alterado" };
+    if (key) {
+      if (mac !== undefined && mac !== macOf(key.key, hash)) return { ok: false, entries: lines.length, brokenAt: i + 1, reason: "firma HMAC inválida (cadena recalculada sin la clave)" };
+      if (mac === undefined && e.ts >= key.created) return { ok: false, entries: lines.length, brokenAt: i + 1, reason: "entrada sin firma posterior a la creación de la clave (firma quitada)" };
+      if (mac !== undefined) signed++;
+    }
     prev = hash;
   }
-  return { ok: true, entries: lines.length };
+  return key ? { ok: true, entries: lines.length, signed } : { ok: true, entries: lines.length };
 }

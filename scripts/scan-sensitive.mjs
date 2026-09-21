@@ -183,6 +183,21 @@ function readWorking(f) {
   }
 }
 
+/**
+ * Invariante del paquete publicado: instalarlo nunca ejecuta nada. El `ignore-scripts` de nuestro .npmrc no viaja
+ * en el tarball, así que quien instala @dozimple/abap-adt solo está protegido si el paquete no declara scripts de
+ * instalación (auditoría DZ-30).
+ */
+const INSTALL_SCRIPTS = ["preinstall", "install", "postinstall", "prepare", "preprepare", "postprepare"];
+if ((mode === "tree" || mode === "commit") && existsSync("package.json")) {
+  try {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    for (const k of INSTALL_SCRIPTS) if (pkg.scripts && k in pkg.scripts) report("package.json", `script de instalación «${k}» (instalar el paquete ejecutaría código)`);
+  } catch {
+    report("package.json", "no es JSON válido");
+  }
+}
+
 let scanned = 0;
 if (mode === "tree" || mode === "commit") {
   const files = [...new Set([...gitLines(["ls-files"]), ...gitLines(["ls-files", "--others", "--exclude-standard"])])];
