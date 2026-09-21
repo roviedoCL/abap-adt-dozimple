@@ -47,24 +47,24 @@ export function normalizeError(e: unknown, systemId?: string): ToolError {
     );
   }
   if (isCsrfError(e)) {
-    return new ToolError("AUTH", `Sesión o token CSRF rechazado por ${systemId ?? "SAP"}: ${any.message}`);
+    return new ToolError("AUTH", `Sesión o token CSRF rechazado por ${systemId ?? "SAP"}: ${sanitizeMessage(any.message)}`);
   }
   if (isHttpError(e)) {
     const st = any.status;
     if (st === 401) return new ToolError("AUTH", `Usuario o contraseña rechazados por ${systemId ?? "SAP"} (401).`);
-    if (st === 403) return new ToolError("AUTH", `Sin autorización (403): ${any.message}`);
-    if (st === 404) return new ToolError("NOT_FOUND", `No encontrado (404): ${any.message}`);
-    return new ToolError("SAP", `HTTP ${st ?? "?"}: ${any.message}`);
+    if (st === 403) return new ToolError("AUTH", `Sin autorización (403): ${sanitizeMessage(any.message)}`);
+    if (st === 404) return new ToolError("NOT_FOUND", `No encontrado (404): ${sanitizeMessage(any.message)}`);
+    return new ToolError("SAP", `HTTP ${st ?? "?"}: ${sanitizeMessage(any.message)}`);
   }
   if (isAdtError(e)) {
     const st = any.err as number;
-    const msg = any.localizedMessage || any.message || "sin mensaje";
+    const msg = sanitizeMessage(any.localizedMessage || any.message || "sin mensaje", 1500);
     if (st === 401) return new ToolError("AUTH", `Usuario o contraseña rechazados (401): ${msg}`);
     if (st === 403) return new ToolError("AUTH", `Sin autorización (403): ${msg}`);
     if (st === 404) return new ToolError("NOT_FOUND", msg);
     return new ToolError("SAP", `${msg}${st ? ` (HTTP ${st})` : ""}`);
   }
-  const message = any?.message ? String(any.message) : String(e);
+  const message = sanitizeMessage(any?.message ? String(any.message) : String(e));
   return new ToolError("INTERNAL", message || "Error sin mensaje");
 }
 
@@ -82,4 +82,19 @@ export function renderError(te: ToolError): string {
   };
   return `${labels[te.kind]}: ${te.message}${te.hint ? `\n${te.hint}` : ""}\n` +
     `(No se completó la operación: no interpretes esto como un resultado vacío.)`;
+}
+
+/**
+ * Texto de error apto para llegar al modelo (y por tanto al proveedor LLM): sin credenciales incrustadas en URLs,
+ * sin cabeceras Authorization, sin marcado y con longitud acotada. Los errores de SAP o de HTTP pueden traer rutas,
+ * hosts o páginas de error enteras; aquí se reducen a lo útil para diagnosticar.
+ */
+export function sanitizeMessage(msg: string, max = 500): string {
+  const clean = String(msg)
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, "$1[credenciales]@")
+    .replace(/(authorization["']?\s*[:=]\s*["']?)(basic|bearer)\s+[A-Za-z0-9+/=._-]+/gi, "$1$2 [oculto]")
+    .replace(/<[^>]{0,200}>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length > max ? clean.slice(0, max) + "…" : clean;
 }

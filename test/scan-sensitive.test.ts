@@ -73,6 +73,19 @@ describe("escáner: credenciales", () => {
   });
 });
 
+describe("escáner: excepciones", () => {
+  it("un comentario en la misma línea no salva una contraseña real (la excepción mira el fragmento, no la línea)", () => {
+    put("src/p.ts", `const pwd = "${"q".repeat(10)}"; // en prod usa keychain\n`);
+    const r = scan();
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("contraseña en claro");
+  });
+  it("las referencias legítimas siguen permitidas", () => {
+    put("src/ok.ts", 'password: "keychain"\npassword: "env:SAP_PWD"\npassword: "<tu clave>"\n');
+    expect(scan()).toMatchObject({ code: 0 });
+  });
+});
+
 describe("escáner: direcciones", () => {
   it("detecta IPs privadas y públicas, hosts SAP con puerto y dominios internos", () => {
     put("a.md", `servidor ${FAKE.privateIp}\n`);
@@ -145,5 +158,23 @@ describe("escáner: alcance", () => {
     const h = scan("--history");
     expect(h.code).toBe(1); // …pero el historial no
     expect(h.out).toMatch(/[0-9a-f]{7}:src\/c\.ts:1\s+token de npm/);
+  });
+});
+
+describe("escáner: línea base del historial", () => {
+  it("un hallazgo revisado en .scan-baseline no bloquea; uno nuevo sí", () => {
+    put("src/d.ts", `const t = "${FAKE.npm}";\n`);
+    git("add", "-A");
+    git("commit", "-q", "-m", "fixture");
+    const sha = execFileSync("git", ["rev-parse", "--short=7", "HEAD"], { cwd: repo, encoding: "utf8" }).trim();
+    expect(scan("--history").code).toBe(1);
+    put(".scan-baseline", `${sha}:src/d.ts  token de npm  # ficticio\n`);
+    expect(scan("--history")).toMatchObject({ code: 0 });
+    put("src/e.ts", `const u = "${FAKE.aws}";\n`);
+    git("add", "src/e.ts");
+    git("commit", "-q", "-m", "otro");
+    const r = scan("--history");
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("clave AWS");
   });
 });

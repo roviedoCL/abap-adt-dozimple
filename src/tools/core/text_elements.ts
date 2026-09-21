@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { textElementsUrl, type ADTClient, type TextElement } from "abap-adt-api";
+import { stateOf } from "../../core/confirm.js";
 import { ToolError } from "../../core/errors.js";
 import { resolveObject, TYPE_HELP, type ResolvedObject } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
@@ -23,6 +24,10 @@ async function mergeTexts(c: ADTClient, obj: ResolvedObject, category: Category,
   }
   return { current, merged };
 }
+
+/** Huella del conjunto de textos tal como está en SAP (orden estable), para comparar vista previa y escritura. */
+const textsState = (ts: TextElement[]) =>
+  stateOf(JSON.stringify(ts.map((t) => [t.id.toUpperCase(), t.text, t.maxLength ?? null]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))));
 
 const read = defineTool({
   name: "text_elements",
@@ -76,14 +81,15 @@ const write = defineTool({
       return `  ~ ${id}  «${prev.text}» → «${now.text}»  [máx ${now.maxLength}]`;
     });
     const warn = requested ? await transportWarnings(sap, requested, system.user) : [];
-    return [
+    const text = [
       ...(warn.length ? [`AVISOS DE LA ORDEN ${requested}:`, ...warn.map((w) => "  ⚠ " + w), ""] : []),
       `${obj.name} (${obj.type}) · ${category} · orden ${requested ?? "ninguna indicada"}`,
       `Quedarán ${merged.size} (hoy ${current.length}); no se borra ninguno.`,
       ...lines,
-    ].join("\n");
+    ];
+    return { text: text.join("\n"), state: textsState(current) };
   },
-  async run({ object_name, object_type, category, elements, transport }, { sap }) {
+  async run({ object_name, object_type, category, elements, transport }, { sap, confirmedState }) {
     const requested = transport ? assertTrkorr(transport) : undefined;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
@@ -92,6 +98,10 @@ const write = defineTool({
     const res = await sap.stateful(async (s) => {
       const lock = await s.lock(obj.uri);
       try {
+        // Igual que write_source: bajo el bloqueo, los textos tienen que seguir como en la vista previa.
+        if (confirmedState && textsState((await s.getTextElements(url, category)).textElements) !== confirmedState) {
+          return { ok: false as const, reason: `No se escribió nada: los ${category} de ${obj.name} cambiaron en SAP después de la vista previa. Pide una vista previa nueva.` };
+        }
         const parent = lock.CORRNR ? (await orderHeaders(sap, [lock.CORRNR])).get(lock.CORRNR)?.parent : undefined;
         const d = decideTransport(lock, requested, parent);
         if (!d.ok) return d;

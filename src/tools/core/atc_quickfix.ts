@@ -6,13 +6,13 @@ import { isError, renderSyntax, syntaxCheck } from "../../core/checks.js";
 import { diffLines, unified } from "../../core/diff.js";
 import { applyEdits } from "../../core/edits.js";
 import { ToolError } from "../../core/errors.js";
-import { decodeEntities, stripTags } from "../../core/feeds.js";
+import { decodeEntities, MAX_HTML_INPUT, neutralizeMarkup, stripTags } from "../../core/feeds.js";
 import { resolveObject, sourceUrl, TYPE_HELP, type ResolvedObject } from "../../core/objects.js";
 import { defineTool } from "../../core/tool.js";
 
 const decode = decodeEntities;
 /** ADT entrega estas descripciones con el HTML escapado dentro del XML: se decodifica dos veces, a propósito, y luego se quitan etiquetas. */
-const plain = (html: string) => stripTags(decode(decode(html)), "").replace(/\s+/g, " ").trim();
+const plain = (html: string) => neutralizeMarkup(stripTags(decode(decode(html.slice(0, MAX_HTML_INPUT))), "")).replace(/\s+/g, " ").trim();
 
 /** Columnas donde probar: la indicada y el inicio de cada token de la línea (literales primero). */
 export function candidateColumns(line: string, given: number): number[] {

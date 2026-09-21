@@ -61,6 +61,13 @@ export function assertDocId(id: string, cfg: Config): void {
     } catch {
       throw new ToolError("INPUT", `«${id}» no es un id de documento válido.`);
     }
+    // La forma se comprueba sobre el id YA decodificado: un «%2F» no puede colar una URL de otro host.
+    const shapes = [
+      /^sap-help-[A-Za-z0-9_-]+(~[A-Za-z0-9._-]+)?$/,
+      /^community-\d+$/,
+      /^community-url-https:\/\/community\.sap\.com\/[A-Za-z0-9._~\/?=&#%+-]*$/,
+    ];
+    if (!shapes.some((re) => re.test(decoded))) throw new ToolError("INPUT", `«${id}» no tiene la forma de un documento de SAP Help o SAP Community.`);
     assertPublicQuery(decoded.replace(/[-/:.?=&#]/g, " "), cfg, sc.blockTerms);
     return;
   }

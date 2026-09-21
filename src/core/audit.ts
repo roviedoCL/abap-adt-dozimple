@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { stateDir } from "./telemetry.js";
 
@@ -41,7 +41,7 @@ export interface AuditEntry extends Omit<AuditInput, "args"> {
 }
 
 /** E/S del registro, sustituible en tests para simular disco lleno o permisos. */
-export const auditIo = { appendFileSync, existsSync, mkdirSync, readFileSync };
+export const auditIo = { appendFileSync, existsSync, mkdirSync, readFileSync, openSync, closeSync, fstatSync, readSync, statSync, rmSync };
 
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -66,12 +66,55 @@ function entryHash(e: Omit<AuditEntry, "hash">): string {
   return sha256(JSON.stringify(e));
 }
 
+/** Última entrada leyendo solo la cola del archivo (el registro no se relee entero en cada escritura). */
 function lastEntry(path: string): { seq: number; hash: string } {
   if (!auditIo.existsSync(path)) return { seq: 0, hash: GENESIS };
-  const lines = auditIo.readFileSync(path, "utf8").trimEnd().split("\n").filter(Boolean);
-  if (!lines.length) return { seq: 0, hash: GENESIS };
-  const last = JSON.parse(lines[lines.length - 1]) as AuditEntry;
-  return { seq: last.seq, hash: last.hash };
+  const fd = auditIo.openSync(path, "r");
+  try {
+    const size = auditIo.fstatSync(fd).size;
+    if (!size) return { seq: 0, hash: GENESIS };
+    for (let window = 16 * 1024; ; window *= 4) {
+      const start = Math.max(0, size - window);
+      const buf = Buffer.alloc(size - start);
+      auditIo.readSync(fd, buf, 0, buf.length, start);
+      const lines = buf.toString("utf8").trimEnd().split("\n");
+      // Si la ventana empieza a mitad de una línea, la primera está cortada: vale la última si hay al menos dos.
+      if (lines.length >= 2 || start === 0) {
+        const last = JSON.parse(lines[lines.length - 1]) as AuditEntry;
+        return { seq: last.seq, hash: last.hash };
+      }
+    }
+  } finally {
+    auditIo.closeSync(fd);
+  }
+}
+
+/**
+ * Bloqueo entre procesos (dos clientes MCP pueden tener cada uno su servidor): sin él, dos escrituras simultáneas
+ * leerían el mismo «prev» y romperían la cadena, que sería indistinguible de una manipulación.
+ */
+function withLock<T>(dir: string, fn: () => T): T {
+  const lock = join(dir, AUDIT_FILE + ".lock");
+  const deadline = Date.now() + 5_000;
+  for (;;) {
+    try {
+      auditIo.closeSync(auditIo.openSync(lock, "wx", 0o600));
+      break;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      // Un bloqueo de más de 30 s es de un proceso que murió a mitad: se recupera.
+      try {
+        if (Date.now() - auditIo.statSync(lock).mtimeMs > 30_000) auditIo.rmSync(lock, { force: true });
+      } catch {}
+      if (Date.now() > deadline) throw new Error("registro de auditoría bloqueado por otro proceso");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    auditIo.rmSync(lock, { force: true });
+  }
 }
 
 /**
@@ -81,6 +124,10 @@ function lastEntry(path: string): { seq: number; hash: string } {
 export function appendAudit(input: AuditInput, dir = stateDir()): AuditEntry {
   auditIo.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, AUDIT_FILE);
+  return withLock(dir, () => appendLocked(path, input));
+}
+
+function appendLocked(path: string, input: AuditInput): AuditEntry {
   const prev = lastEntry(path);
   const base: Omit<AuditEntry, "hash"> = {
     seq: prev.seq + 1,

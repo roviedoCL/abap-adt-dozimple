@@ -35,6 +35,11 @@ const SystemSchema = z.object({
   dataClass: z.enum(["test", "masked", "prod"]).optional(),
   /** Tope de filas por consulta; por defecto test 5000, masked 1000, prod 200. */
   maxRows: z.number().int().min(1).max(5000).optional(),
+  /**
+   * Columnas personales propias de este cliente (campos Z o alias de CDS) que se enmascaran igual que las estándar
+   * en sistemas masked/prod. El enmascarado es por nombre: lo que no esté aquí ni en la lista estándar sale en claro.
+   */
+  piiColumns: z.array(z.string().regex(/^[A-Za-z0-9_/]+$/)).default([]),
   password: z
     .string()
     .regex(/^(keychain|env:[A-Z0-9_]+)$/, 'password: "keychain" o "env:NOMBRE_VARIABLE"')
@@ -78,6 +83,12 @@ export function parseConfig(raw: unknown): Config {
     if (ids.has(key)) throw new Error(`Sistema duplicado en la configuración: ${s.id}`);
     ids.add(key);
   }
+  for (const s of cfg.systems) {
+    // Sin verificar TLS, quien intercepte la red recibe usuario y contraseña (Basic): nunca en calidad ni productivo.
+    if (s.allowSelfSigned && s.role !== "DEV") {
+      throw new Error(`${s.id}: allowSelfSigned solo se admite en sistemas DEV. Para ${s.role} usa caFile con el certificado de su CA.`);
+    }
+  }
   if (cfg.defaultSystem && !ids.has(cfg.defaultSystem.toUpperCase())) {
     throw new Error(`defaultSystem "${cfg.defaultSystem}" no está en systems[]`);
   }
@@ -100,6 +111,7 @@ export function loadConfig(path = configPath()): Config {
  * servidor y si puede escribir en él: tiene que ser solo del usuario.
  */
 export function assertPrivateFile(path: string, st: { mode: number; uid: number } = statSync(path)): void {
+  // En Windows no hay bits de modo ni uid comparables: el control no se aplica y el arranque lo avisa (startupWarnings).
   if (process.platform === "win32") return;
   if (st.mode & 0o022) {
     throw new Error(`${path} lo pueden modificar otros usuarios (permisos ${(st.mode & 0o777).toString(8)}). Corrígelo con: chmod 600 "${path}"`);
@@ -151,4 +163,16 @@ export function resolveSystem(
   throw new Error(
     `Hay varios sistemas y ninguno por defecto: indica "system" (${cfg.systems.map((x) => x.id).join(", ")})`,
   );
+}
+
+/** Avisos que se escriben por stderr en cada arranque: lo que la configuración deja más débil de lo normal. */
+export function startupWarnings(cfg: Config, platform = process.platform): string[] {
+  const out: string[] = [];
+  for (const s of cfg.systems) {
+    if (s.allowSelfSigned && !s.caFile) out.push(`${s.id}: TLS SIN VERIFICAR (allowSelfSigned). Configura caFile con el certificado de su CA.`);
+  }
+  if (platform === "win32") {
+    out.push("Windows: no se comprueban los permisos de systems.json ni del estado local. Asegúrate de que solo tu usuario pueda modificarlos (define sidecars que se ejecutan).");
+  }
+  return out;
 }

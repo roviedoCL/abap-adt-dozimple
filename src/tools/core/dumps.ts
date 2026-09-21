@@ -3,6 +3,7 @@ import type { Dump } from "abap-adt-api";
 import { ToolError } from "../../core/errors.js";
 import { decodeEntities, htmlToText } from "../../core/feeds.js";
 import { budget } from "../../core/output.js";
+import { SAP_USER_RE } from "../../core/policy.js";
 import { defineTool } from "../../core/tool.js";
 
 const decode = decodeEntities;
@@ -31,7 +32,7 @@ export default defineTool({
   access: "read",
   requires: { adt: ["/sap/bc/adt/runtime/dumps"] },
   input: {
-    user: z.string().optional(),
+    user: z.string().regex(SAP_USER_RE, "usuario SAP: letras, números y _ . @ -, hasta 12").optional(),
     contains: z.string().optional().describe("Filtra por error o programa, p. ej. CALL_FUNCTION_NOT_FOUND o ZFI_REPORTE"),
     max: z.number().int().min(1).max(200).default(20),
     detail: z.number().int().min(1).optional().describe("Número de la lista para ver el dump completo"),

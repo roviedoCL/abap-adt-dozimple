@@ -8,7 +8,12 @@ import type { SapConnection } from "../../core/connection.js";
 /** Código de idioma interno de SAP (DDLANGUAGE es LANG de 1 carácter). */
 const LANG: Record<string, string> = { EN: "E", ES: "S", DE: "D", PT: "P", FR: "F", IT: "I" };
 
-async function text(sap: SapConnection, table: string, keyField: string, key: string, lang: string, fields: string) {
+/** Solo tablas de texto del DDIC y sus campos, como literales: el compilador impide pasar un valor de usuario. */
+type TextTable = "dd04t" | "dd01t" | "dd07t" | "dd40t" | "dd02t";
+type TextKey = "rollname" | "domname" | "typename" | "tabname";
+
+async function text(sap: SapConnection, table: TextTable, keyField: TextKey, key: string, lang: string, fields: string) {
+  if (!/^[a-z0-9_]+(\s*,\s*[a-z0-9_]+)*$/i.test(fields)) throw new Error(`Lista de campos inválida: ${fields}`);
   const r = await sap.query(`SELECT ddlanguage, ${fields} FROM ${table} WHERE ${keyField} = ${sqlLiteral(key)} AND as4local = 'A'`, 20);
   return r.values.find((v) => v.DDLANGUAGE === lang) ?? r.values.find((v) => v.DDLANGUAGE === "E") ?? r.values[0];
 }

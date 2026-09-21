@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { normalizeError, ToolError } from "../../core/errors.js";
-import { CLASS_INCLUDES, resolveObject, sourceUrl, sqlLiteral, TYPE_HELP } from "../../core/objects.js";
+import { CLASS_INCLUDES, resolveObject, sourceUrl, sqlLiteral, TYPE_HELP, adtPathName } from "../../core/objects.js";
 import { numbered, tsv } from "../../core/output.js";
 import { defineTool } from "../../core/tool.js";
 import type { SapConnection } from "../../core/connection.js";
@@ -51,7 +51,7 @@ export default defineTool({
       if (!obj.type.startsWith("TABL")) throw te;
       // 7.50: las tablas no tienen fuente ADT; primero la vía de estructuras, luego DD03L.
       try {
-        source = await c.getObjectSource(`/sap/bc/adt/ddic/structures/${encodeURIComponent(obj.name.toLowerCase())}/source/main`);
+        source = await c.getObjectSource(`/sap/bc/adt/ddic/structures/${adtPathName(obj.name)}/source/main`);
       } catch {
         return ddicFields(sap, obj.name);
       }

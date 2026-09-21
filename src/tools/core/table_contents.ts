@@ -7,15 +7,45 @@ import { defineTool } from "../../core/tool.js";
 const NAME_RE = /^[A-Z0-9_/]+$/;
 
 /**
- * WHERE y ORDER BY se concatenan al SELECT: no pueden abrir otra consulta,
- * comentar el resto ni cambiar de sentencia. Lo que haga falta más allá, con sql_query.
+ * WHERE y ORDER BY se concatenan al SELECT, así que se validan por LISTA BLANCA: el fragmento se trocea y cada
+ * pieza tiene que ser una de las formas esperadas de una condición sobre columnas. Lo que no encaje (otra cláusula,
+ * subconsulta, comentario, «;», comillas dobles, host variables…) se rechaza, aunque una versión futura de ABAP SQL
+ * lo admitiera. Para consultas más ricas está sql_query.
  */
+const CONDITION_WORDS = new Set(["AND", "OR", "NOT", "LIKE", "IN", "BETWEEN", "IS", "NULL", "INITIAL", "ESCAPE", "EQ", "NE", "LT", "GT", "LE", "GE"]);
+/** Palabras de cláusula o de sentencia: nunca pueden aparecer como «columna» en un filtro. */
+const CLAUSE_WORDS = new Set([
+  "SELECT", "FROM", "WHERE", "JOIN", "INNER", "OUTER", "LEFT", "RIGHT", "CROSS", "UNION", "INTERSECT", "EXCEPT", "INTO",
+  "GROUP", "ORDER", "BY", "HAVING", "UP", "TO", "ROWS", "CLIENT", "SPECIFIED", "USING", "EXISTS", "ALL", "ANY", "SOME",
+  "FOR", "UPDATE", "DELETE", "INSERT", "MODIFY", "DISTINCT", "SINGLE", "WITH", "AS", "CASE", "WHEN", "THEN", "ELSE",
+  "END", "BYPASSING", "BUFFER", "CONNECTION", "APPENDING", "PACKAGE", "SIZE", "OFFSET", "FIELDS",
+]);
+const TOKEN = /\s*(?:('(?:[^']|'')*')|(\d+(?:\.\d+)?)|([A-Za-z_/][A-Za-z0-9_/~]*)|(<>|<=|>=|!=|=|<|>)|([(),]))/y;
+
 export function assertSafeFragment(frag: string, label: string): void {
-  const outside = frag.replace(/'(?:[^']|'')*'/g, "''");
-  if ((frag.match(/'/g)?.length ?? 0) % 2) throw new ToolError("INPUT", `${label}: comilla sin cerrar.`);
-  if (/[;"*]|--/.test(outside) || /\b(select|union|intersect|except|into|from|join|delete|update|insert|modify)\b/i.test(outside)) {
-    throw new ToolError("INPUT", `${label}: solo condiciones sobre columnas (sin subconsultas, comentarios ni «;»). Para eso usa sql_query.`);
+  const fail = (why: string): never => {
+    throw new ToolError("INPUT", `${label}: ${why}. Solo condiciones sobre columnas (columna, operador, literal, AND/OR/NOT, LIKE, IN, BETWEEN, IS NULL/INITIAL, paréntesis); para más, sql_query.`);
+  };
+  let depth = 0;
+  TOKEN.lastIndex = 0;
+  let pos = 0;
+  while (pos < frag.length) {
+    if (!frag.slice(pos).trim()) break;
+    TOKEN.lastIndex = pos;
+    const m = TOKEN.exec(frag);
+    if (!m) fail(`«${frag.slice(pos).trim().slice(0, 12)}…» no es parte de una condición`);
+    pos = TOKEN.lastIndex;
+    const [, lit, , word, , punct] = m!;
+    if (lit !== undefined && lit.length < 2) fail("comilla sin cerrar");
+    if (word !== undefined) {
+      const w = word.toUpperCase();
+      if (CLAUSE_WORDS.has(w)) fail(`«${word}» es una cláusula, no una columna`);
+      if (!CONDITION_WORDS.has(w) && !/^[A-Za-z_/][A-Za-z0-9_/]*(~[A-Za-z0-9_/]+)?$/.test(word)) fail(`«${word}» no es un nombre de columna`);
+    }
+    if (punct === "(") depth++;
+    if (punct === ")" && --depth < 0) fail("paréntesis sin abrir");
   }
+  if (depth !== 0) fail("paréntesis sin cerrar");
 }
 
 export default defineTool({

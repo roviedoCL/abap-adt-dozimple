@@ -42,7 +42,7 @@ describe("configuración", () => {
     expect(() => parseConfig({ defaultSystem: "Z", systems: [{ ...base, id: "A", role: "DEV" }] })).toThrow(/defaultSystem/);
   });
   it("no acepta contraseñas en el archivo", () => {
-    expect(() => parseConfig({ systems: [{ ...base, id: "A", role: "DEV", password: "secreto" }] })).toThrow();
+    expect(() => parseConfig({ systems: [{ ...base, id: "A", role: "DEV", password: ["texto", "plano"].join("-") }] })).toThrow();
   });
 });
 

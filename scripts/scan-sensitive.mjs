@@ -90,7 +90,7 @@ const rules = [
   // Anclado a un límite (inicio o carácter que no forma parte de un nombre de host): «evilhooks.slack.com» no cuenta.
   { name: "webhook con secreto", re: /(?:^|[^A-Za-z0-9.-])(?:hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+|discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+)/ },
   { name: "cabecera Authorization con valor", re: /authorization["']?\s*[:=]\s*["'](Basic|Bearer)\s+[A-Za-z0-9+/=._-]{12,}/i },
-  { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{|secreto/ },
+  { name: "contraseña en claro", re: /\b(password|passwd|pwd)["']?\s*[:=]\s*["'][^"'\s]{6,}["']/i, allow: /keychain|env:|<|\$\{/ },
   {
     name: "secreto asignado",
     re: /\b(api[_-]?key|secret|client[_-]?secret|access[_-]?token|auth[_-]?token|private[_-]?key)["']?\s*[:=]\s*["'][A-Za-z0-9+/=_-]{16,}["']/i,
@@ -147,8 +147,14 @@ function scanText(where, text, lineOffset = 0) {
   text.split("\n").forEach((line, i) => {
     const l = stripOwn(line);
     for (const r of rules) {
-      const hit = r.test ? r.test(l) : r.re.test(l);
-      if (hit && !(r.allow && r.allow.test(l))) report(`${where}:${i + 1 + lineOffset}`, r.name);
+      if (r.test) {
+        if (r.test(l)) report(`${where}:${i + 1 + lineOffset}`, r.name);
+        continue;
+      }
+      // La excepción se evalúa sobre el FRAGMENTO detectado, no sobre la línea: un comentario «usa keychain» en la
+      // misma línea no puede salvar una contraseña real.
+      const m = r.re.exec(l);
+      if (m && !(r.allow && r.allow.test(m[0]))) report(`${where}:${i + 1 + lineOffset}`, r.name);
     }
   });
 }
@@ -221,7 +227,18 @@ if (mode === "history") {
   }
 }
 
-const unique = [...new Set(findings)];
+// Línea base: hallazgos del HISTORIAL ya revisados (p. ej. un valor ficticio en un commit publicado). Solo aplica en
+// modo --history; identifica el hallazgo por commit + archivo + regla, nunca por su valor.
+const baseline = new Set();
+if (mode === "history" && existsSync(".scan-baseline")) {
+  for (const l of readFileSync(".scan-baseline", "utf8").split("\n")) {
+    const m = /^([0-9a-f]{7,40}:\S+)\s{2,}([^#]+?)\s*(#.*)?$/.exec(l.trim());
+    if (m && !l.trim().startsWith("#")) baseline.add(`${m[1]}  ${m[2]}`);
+  }
+}
+const accepted = findings.filter((f) => baseline.has(f.replace(/^([0-9a-f]+:[^:]+):\d+/, "$1")));
+const unique = [...new Set(findings.filter((f) => !accepted.includes(f)))];
+if (accepted.length) console.error(`[scan] ${new Set(accepted).size} hallazgos del historial aceptados en .scan-baseline (revisados, sin secretos reales).`);
 if (unique.length) {
   console.error(`[scan] ✗ ${unique.length} hallazgos (no se muestran los valores):\n  ${unique.join("\n  ")}`);
   console.error("[scan] Nada de credenciales, direcciones ni datos reales: usa datos ficticios (ZDEMO_*, DEVK900123, *.example). Bloqueado.");

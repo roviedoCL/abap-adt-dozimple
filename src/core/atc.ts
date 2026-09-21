@@ -62,7 +62,9 @@ export async function defaultVariant(c: ADTClient): Promise<string> {
   return typeof v === "string" && v ? v : "DEFAULT";
 }
 
-const xmlEsc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+/** Escapado XML completo (texto y atributos con comillas simples o dobles). */
+const xmlEsc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 /**
  * Ejecución ATC sobre varios objetos a la vez. La librería solo admite una

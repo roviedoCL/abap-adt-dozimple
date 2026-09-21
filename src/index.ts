@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { configPath, loadConfig } from "./core/config.js";
+import { configPath, loadConfig, startupWarnings } from "./core/config.js";
+import { clearPasswords } from "./core/credentials.js";
 import { ConnectionPool } from "./core/connection.js";
 import { registerPrompts } from "./core/prompts.js";
 import { loadTools, registerAll } from "./core/registry.js";
@@ -43,11 +44,16 @@ async function main() {
     return;
   }
 
+  for (const w of startupWarnings(config)) log(`⚠ ${w}`);
+
   const defs = await loadTools(join(here, "tools"));
   const sidecars = new SidecarPool(config);
   const published = registerAll(server, defs, config, new ConnectionPool(), sidecars);
   // Los componentes auxiliares son procesos hijo: se cierran con el servidor.
-  const shutdown = () => void sidecars.closeAll().finally(() => process.exit(0));
+  const shutdown = () => {
+    clearPasswords();
+    void sidecars.closeAll().finally(() => process.exit(0));
+  };
   process.stdin.on("close", shutdown);
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
