@@ -286,6 +286,32 @@ Designed to pass a Security and Basis review without exceptions. Details: **[SEC
 
 ## Installation
 
+### From npm (recommended)
+
+Pinned to an exact version, without install scripts, like the project's own dependencies:
+
+```sh
+npm install -g --ignore-scripts @dozimple/abap-adt@1.0.0
+PKG="$(npm root -g)/@dozimple/abap-adt"
+mkdir -p ~/.config/abap-adt-dozimple && chmod 700 ~/.config/abap-adt-dozimple
+cp "$PKG/config/systems.example.json" ~/.config/abap-adt-dozimple/systems.json   # systems, roles and permissions
+chmod 600 ~/.config/abap-adt-dozimple/systems.json
+sh "$PKG/scripts/set-password.sh" MY_DEV                                        # prompts; stored in the keychain
+node "$PKG/dist/scripts/smoke.js" MY_DEV                                        # read-only validation
+```
+
+MCP client registration:
+
+```json
+{ "mcpServers": { "abap-adt-doZimple": { "command": "abap-adt-dozimple" } } }
+```
+
+Every release is published from CI with [npm provenance](https://docs.npmjs.com/generating-provenance-statements):
+`npm view @dozimple/abap-adt@1.0.0 dist.attestations` shows the attestation, and the GitHub release carries the
+tarball, its Sigstore bundle and the SBOM.
+
+### From source
+
 ```sh
 npm ci && npm run build
 mkdir -p ~/.config/abap-adt-dozimple

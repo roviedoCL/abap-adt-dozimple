@@ -286,6 +286,32 @@ Modelo de amenazas con STRIDE y OWASP Top 10 para aplicaciones LLM: **[docs/THRE
 
 ## Instalación
 
+### Desde npm (recomendado)
+
+Con la versión exacta y sin scripts de instalación, igual que las dependencias del propio proyecto:
+
+```sh
+npm install -g --ignore-scripts @dozimple/abap-adt@1.0.0
+PKG="$(npm root -g)/@dozimple/abap-adt"
+mkdir -p ~/.config/abap-adt-dozimple && chmod 700 ~/.config/abap-adt-dozimple
+cp "$PKG/config/systems.example.json" ~/.config/abap-adt-dozimple/systems.json   # sistemas, roles y permisos
+chmod 600 ~/.config/abap-adt-dozimple/systems.json
+sh "$PKG/scripts/set-password.sh" MI_DEV                                        # pide la clave; va al llavero
+node "$PKG/dist/scripts/smoke.js" MI_DEV                                        # validación de solo lectura
+```
+
+Registro en el cliente MCP:
+
+```json
+{ "mcpServers": { "abap-adt-doZimple": { "command": "abap-adt-dozimple" } } }
+```
+
+Cada versión se publica desde el CI con [procedencia de npm](https://docs.npmjs.com/generating-provenance-statements):
+`npm view @dozimple/abap-adt@1.0.0 dist.attestations` muestra la atestación, y la release de GitHub incluye el
+paquete, su bundle de Sigstore y el SBOM.
+
+### Desde el código fuente
+
 ```sh
 npm ci && npm run build
 mkdir -p ~/.config/abap-adt-dozimple

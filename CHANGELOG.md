@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-21
+
+Primera versión estable, publicada en npm como `@dozimple/abap-adt` con procedencia.
+
 ### Seguridad
 - El escáner de datos sensibles detecta tokens de npm y cualquier `_authToken` (p. ej. un `npm login` que escribe en
   el `.npmrc` del proyecto).
