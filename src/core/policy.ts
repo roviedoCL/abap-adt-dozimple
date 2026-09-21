@@ -49,7 +49,11 @@ export const SENSITIVE_TABLES = [
   "USRACL", "SNAP",
 ];
 export const SENSITIVE_PREFIXES = ["OA2C_"];
-export const SENSITIVE_COLUMNS = ["PWDSALTEDHASH", "BCODE", "PASSCODE"];
+/**
+ * Columnas con contraseñas o sus hashes, en cualquier tabla: además de las de USR02, la contraseña del usuario de
+ * inicio de sesión fijo de un servicio ICF (ICFSERVICE-ICF_PASSWD) y nombres genéricos de columna de contraseña.
+ */
+export const SENSITIVE_COLUMNS = ["PWDSALTEDHASH", "BCODE", "PASSCODE", "ICF_PASSWD", "PASSWD", "PASSWORD"];
 
 /** Datos de personal (infotipos, clusters de nómina): categoría especial, nunca por este servidor. */
 export const HR_TABLE_RE = /^(PA\d{4}|PB\d{4}|PCL[1-5]|HRPY_[A-Z0-9_]+)$/;

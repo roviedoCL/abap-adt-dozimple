@@ -267,6 +267,10 @@ describe("datos sensibles", () => {
     expect(() => assertNotSensitive("SELECT pernr FROM pa0002")).toThrow(/personal/);
     expect(() => assertNotSensitive("SELECT * FROM pcl2")).toThrow(/personal/);
     expect(() => assertNotSensitive("SELECT devclass FROM tadir WHERE obj_name = 'USR02'")).not.toThrow();
+    // La contraseña del usuario fijo de un servicio ICF, y columnas de contraseña genéricas.
+    expect(() => assertNotSensitive("SELECT icf_name, icf_passwd FROM icfservice")).toThrow(/seguridad/);
+    expect(() => assertNotSensitive("SELECT * FROM zdemo WHERE password <> ''")).toThrow(/seguridad/);
+    expect(() => assertNotSensitive("SELECT icf_name, icf_user FROM icfservice")).not.toThrow();
   });
 
   it("clase de datos y tope por rol, con sobrescritura explícita", () => {
