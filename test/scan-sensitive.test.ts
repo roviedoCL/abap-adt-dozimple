@@ -178,3 +178,16 @@ describe("escáner: línea base del historial", () => {
     expect(r.out).toContain("clave AWS");
   });
 });
+
+describe("escáner: paquete sin scripts de instalación (DZ-30)", () => {
+  it("falla si package.json declara postinstall, install o prepare; pasa sin ellos", () => {
+    put("package.json", JSON.stringify({ name: "demo", scripts: { build: "tsc", test: "vitest" } }));
+    expect(scan()).toMatchObject({ code: 0 });
+    for (const k of ["postinstall", "install", "prepare"]) {
+      put("package.json", JSON.stringify({ name: "demo", scripts: { [k]: "node x.js" } }));
+      const r = scan();
+      expect(r.code, k).toBe(1);
+      expect(r.out).toContain(`script de instalación «${k}»`);
+    }
+  });
+});

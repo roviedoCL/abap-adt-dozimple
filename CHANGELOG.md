@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Seguridad
+- Seguimiento de la auditoría (prioridades 1 y 2 del auditor y DZ-30): **permisos de `systems.json` en Windows**
+  comprobados por ACL y SID (antes no se comprobaba nada en esa plataforma), fail-closed si no se pueden leer;
+  **registro de auditoría firmado con HMAC-SHA256** con clave en el llavero del SO (quitar firmas se detecta), y
+  `audit:verify` comprueba cadena y firmas; el escáner falla si `package.json` declara scripts de instalación.
+
+### Seguridad
 - **Auditoría de seguridad del 21-09-2026** (30 hallazgos, ninguno alto ni crítico): corregidos todos los accionables.
   Los más relevantes: la escritura ya no aplica un diff aprobado sobre un objeto que cambió en SAP después de la vista
   previa (huella comprobada bajo el bloqueo); filtro de `table_contents` por lista blanca; usuarios SAP validados en

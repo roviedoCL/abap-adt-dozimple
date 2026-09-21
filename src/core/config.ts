@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -111,14 +112,86 @@ export function loadConfig(path = configPath()): Config {
  * servidor y si puede escribir en él: tiene que ser solo del usuario.
  */
 export function assertPrivateFile(path: string, st: { mode: number; uid: number } = statSync(path)): void {
-  // En Windows no hay bits de modo ni uid comparables: el control no se aplica y el arranque lo avisa (startupWarnings).
-  if (process.platform === "win32") return;
+  // En Windows no hay bits de modo ni uid: se leen las ACL (assertPrivateFileWindows).
+  if (process.platform === "win32") return assertPrivateFileWindows(path);
   if (st.mode & 0o022) {
     throw new Error(`${path} lo pueden modificar otros usuarios (permisos ${(st.mode & 0o777).toString(8)}). Corrígelo con: chmod 600 "${path}"`);
   }
   const uid = process.getuid?.();
   if (uid !== undefined && st.uid !== uid) {
     throw new Error(`${path} pertenece a otro usuario (uid ${st.uid}). Debe ser tuyo y con permisos 600.`);
+  }
+}
+
+// ── Windows: ACL del archivo ────────────────────────────────────────────────
+/** Quién puede escribir legítimamente, además del propio usuario: SYSTEM, Administradores, TrustedInstaller. */
+const TRUSTED_SIDS = new Set(["S-1-5-18", "S-1-5-32-544", "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"]);
+/** Derechos que permiten cambiar el contenido, los permisos o el propietario (nombres de .NET y genéricos numéricos). */
+const WRITE_RIGHTS = /FullControl|Modify|Write|AppendData|CreateFiles|ChangePermissions|TakeOwnership|^(268435456|1073741824)$/;
+
+export interface AclEntry {
+  sid: string;
+  rights: string;
+  type: string;
+}
+
+/** Entradas que dan escritura a alguien que no es el usuario ni una identidad del sistema. */
+export function aclViolations(entries: AclEntry[], userSid: string): AclEntry[] {
+  return entries.filter((e) => /allow/i.test(e.type) && e.sid !== userSid && !TRUSTED_SIDS.has(e.sid) && WRITE_RIGHTS.test(e.rights));
+}
+
+/** Salida del script de PowerShell: «USER|<sid>», «OWNER|<sid>» y «ACE|<sid>|<derechos>|<tipo>». */
+export function parseAclOutput(out: string): { user: string; owner: string; entries: AclEntry[] } {
+  let user = "";
+  let owner = "";
+  const entries: AclEntry[] = [];
+  for (const line of out.split(/\r?\n/)) {
+    const [kind, sid, rights, type] = line.trim().split("|");
+    if (kind === "USER") user = sid;
+    else if (kind === "OWNER") owner = sid;
+    else if (kind === "ACE" && sid) entries.push({ sid, rights: rights ?? "", type: type ?? "" });
+  }
+  return { user, owner, entries };
+}
+
+// La ruta llega por variable de entorno, nunca dentro del comando: sin inyección posible.
+const ACL_SCRIPT = [
+  "$ErrorActionPreference='Stop'",
+  "$a=Get-Acl -LiteralPath $env:ABAPDZ_ACL_PATH",
+  "'USER|'+[Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+  "'OWNER|'+(New-Object Security.Principal.NTAccount($a.Owner)).Translate([Security.Principal.SecurityIdentifier]).Value",
+  "foreach($r in $a.Access){ $s=try{$r.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value}catch{$r.IdentityReference.Value}; 'ACE|'+$s+'|'+$r.FileSystemRights+'|'+$r.AccessControlType }",
+].join("; ");
+
+/**
+ * systems.json define qué proceso lanza cada componente (sidecars.command): quien pueda escribirlo ejecuta código
+ * con tu identidad. En Windows se exige que solo tu usuario (y el sistema) pueda modificarlo. Si la comprobación no
+ * se puede hacer, no se arranca (fail-closed), salvo ABAP_DZ_SKIP_ACL_CHECK=1, que queda avisado al arrancar.
+ */
+export function assertPrivateFileWindows(path: string, run = (): string =>
+  execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ACL_SCRIPT], {
+    encoding: "utf8",
+    timeout: 15_000,
+    env: { ...process.env, ABAPDZ_ACL_PATH: path },
+  }),
+): void {
+  if (process.env.ABAP_DZ_SKIP_ACL_CHECK === "1") return;
+  let acl: ReturnType<typeof parseAclOutput>;
+  try {
+    acl = parseAclOutput(run());
+  } catch (e) {
+    throw new Error(`No se pudieron leer los permisos de ${path} (${(e as Error).message.split("\n")[0]}). Sin esa comprobación no se arranca; si lo asumes, define ABAP_DZ_SKIP_ACL_CHECK=1.`);
+  }
+  if (!acl.user) throw new Error(`No se pudo determinar el usuario actual para comprobar ${path}.`);
+  if (acl.owner && acl.owner !== acl.user && !TRUSTED_SIDS.has(acl.owner)) {
+    throw new Error(`${path} pertenece a otra identidad (${acl.owner}). Debe ser tuyo.`);
+  }
+  const bad = aclViolations(acl.entries, acl.user);
+  if (bad.length) {
+    throw new Error(
+      `${path} lo pueden modificar otras identidades (${bad.map((b) => `${b.sid}: ${b.rights}`).join("; ")}). ` +
+        `Déjalo solo para tu usuario: icacls "${path}" /inheritance:r /grant:r "%USERNAME%":F`,
+    );
   }
 }
 
@@ -171,8 +244,8 @@ export function startupWarnings(cfg: Config, platform = process.platform): strin
   for (const s of cfg.systems) {
     if (s.allowSelfSigned && !s.caFile) out.push(`${s.id}: TLS SIN VERIFICAR (allowSelfSigned). Configura caFile con el certificado de su CA.`);
   }
-  if (platform === "win32") {
-    out.push("Windows: no se comprueban los permisos de systems.json ni del estado local. Asegúrate de que solo tu usuario pueda modificarlos (define sidecars que se ejecutan).");
+  if (platform === "win32" && process.env.ABAP_DZ_SKIP_ACL_CHECK === "1") {
+    out.push("Windows: ABAP_DZ_SKIP_ACL_CHECK=1 desactiva la comprobación de permisos de systems.json (que define los procesos que se lanzan). Quítala en cuanto puedas.");
   }
   return out;
 }
