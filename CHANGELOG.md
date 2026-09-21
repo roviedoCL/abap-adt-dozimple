@@ -59,6 +59,9 @@ Primera versión estable, publicada en npm como `@dozimple/abap-adt` con procede
   smoke test no aborta ante una llamada lenta.
 
 ### Añadido
+- Workflow de release (`release.yml`): al crear un tag `vX.Y.Z`, tests, auditoría, escáner, paquete con atestación de
+  procedencia (Sigstore) y SBOM; tras la aprobación manual del environment `release`, publicación en npm con
+  procedencia por trusted publishing (OIDC, sin tokens guardados) y release de GitHub con paquete, atestación y SBOM.
 - **`function_modules`**: módulos de función de un grupo (texto en el idioma de la conexión, tipo RFC / actualización),
   o el grupo y los hermanos de un módulo. Funciona con namespaces.
 - **`run_atc` sobre implementaciones de ampliación** (`object_type: ENHO`, cualquier subtipo).
