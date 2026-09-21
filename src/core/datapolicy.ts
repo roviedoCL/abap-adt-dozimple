@@ -2,7 +2,7 @@ import type { SystemConfig } from "./config.js";
 import type { SapConnection } from "./connection.js";
 import { normalizeError, ToolError } from "./errors.js";
 import { adtPathName, sqlLiteral } from "./objects.js";
-import { assertNotSensitive, assertSelectOnly, rejectSensitive, sensitiveHits, sqlWords } from "./policy.js";
+import { assertNotSensitive, assertSelectOnly, rejectSensitive, SENSITIVE_COLUMNS, sensitiveHits, sqlWords } from "./policy.js";
 
 /**
  * Gobierno de los datos de negocio que devuelven sql_query y table_contents.
@@ -179,6 +179,16 @@ export async function guardedQuery(sap: SapConnection, system: SystemConfig, sql
   const cap = Math.min(requestedRows, rowCap(system));
   const r = await sap.query(q, cap);
   const columns = r.columns.map((c) => c.name);
+  // «SELECT *» no nombra las columnas: el veto se aplica también a lo que DEVUELVE SAP. Si llega alguna vetada, se
+  // descarta el resultado entero antes de mostrar nada.
+  const vetoed = columns.filter((c) => SENSITIVE_COLUMNS.includes(c.toUpperCase()));
+  if (vetoed.length) {
+    r.values.length = 0;
+    throw new ToolError(
+      "POLICY",
+      `Consulta bloqueada: el resultado incluye columnas de credenciales (${vetoed.join(", ")}). Pide las columnas concretas que necesitas, sin esas.`,
+    );
+  }
   const notes: string[] = [];
   const masked = maskPii(cls, q, columns, r.values, system.piiColumns ?? []);
   if (masked.length) notes.push(`Columnas personales enmascaradas (sistema con datos ${cls === "prod" ? "productivos" : "enmascarados"}): ${masked.join(", ")}.`);

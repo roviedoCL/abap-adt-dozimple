@@ -379,6 +379,17 @@ describe("datos sensibles", () => {
     expect(queried.some((x) => /USR21/.test(x))).toBe(true);
   });
 
+  it("SELECT * que devuelve una columna de contraseña se bloquea sin mostrar nada", async () => {
+    const sap = {
+      query: async (sql: string) =>
+        /dd26s|ddldependency/i.test(sql)
+          ? { columns: [], values: [] }
+          : { columns: [{ name: "ICF_NAME" }, { name: "ICF_PASSWD" }], values: [{ ICF_NAME: "ZDEMO", ICF_PASSWD: "x" }] },
+      adt: async () => ({}),
+    } as any;
+    await expect(guardedQuery(sap, cfg.systems[0], "SELECT * FROM icfservice", 10)).rejects.toThrow(/columnas de credenciales \(ICF_PASSWD\)/);
+  });
+
   it("guardedQuery aplica el tope del sistema y enmascara en PRD", async () => {
     const { sap } = fakeSap({});
     const r = await guardedQuery(sap, cfg.systems[2], "SELECT kunnr, name1 FROM kna1", 5000);
