@@ -36,6 +36,9 @@ Secrets, addresses and customer data: see the [commit security procedure](docs/C
 - **Security controls need adversarial tests**: show the attack or misuse is blocked (e.g. a view that reads a vetoed
   table, a write without confirmation, a tampered audit log), not only the happy path.
 - Tests use fictitious data and a temporary state directory (`ABAP_DZ_STATE_DIR`); they never need a SAP system.
+- **Input parsers get property-based tests** (`test/property.test.ts`, [fast-check](https://fast-check.dev/)): state
+  the invariant the function guarantees for *any* input and let the generator look for the counterexample. Keep the
+  generators targeted — random text alone rarely reaches the interesting inputs; `FC_RUNS=5000 npm test` runs deeper.
 - Logic that depends on a SAP release is validated live on at least one system before release, and the result is
   noted in the PR.
 

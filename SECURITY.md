@@ -46,7 +46,8 @@ aplicaciones LLM, riesgos residuales): **[docs/THREAT_MODEL.md](docs/THREAT_MODE
 
 ```sh
 npm run security      # npm audit + firmas del registro + escáner de credenciales y datos de clientes
-npm test              # incluye los tests de política y de seguridad (test/security.test.ts)
+npm test              # incluye los tests de política y de seguridad (test/security.test.ts) y las
+                      # pruebas por propiedades de la entrada hostil (test/property.test.ts, fast-check)
 npm run audit:verify  # integridad del registro de auditoría local
 npm run sbom          # SBOM CycloneDX de las dependencias de producción
 ```
