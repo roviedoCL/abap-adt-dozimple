@@ -308,7 +308,8 @@ Registro en el cliente MCP:
 
 Cada versión se publica desde el CI con [procedencia de npm](https://docs.npmjs.com/generating-provenance-statements):
 `npm view @dozimple/abap-adt@1.0.0 dist.attestations` muestra la atestación, y la release de GitHub incluye el
-paquete, su bundle de Sigstore y el SBOM.
+paquete, su bundle de Sigstore (`.sigstore.json`), el mismo bundle como procedencia in-toto (`.intoto.jsonl`)
+y el SBOM. Para comprobarlo: `gh attestation verify dozimple-abap-adt-1.0.0.tgz --repo <owner>/abap-adt-dozimple`.
 
 ### Desde el código fuente
 
