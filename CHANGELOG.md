@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Cambiado
+- El job de publicación usa Node 24, que ya trae npm >= 11.5.1: se quita la instalación global de npm, que no se
+  puede fijar por hash. Un paso comprueba la versión y falla antes de publicar si no la cumple. El build sigue en
+  Node 22, la versión mínima que soporta el servidor.
+
 ## [1.0.1] - 2026-09-22
 
 Versión de mantenimiento: seguimiento de la auditoría de seguridad, procedimiento de commit y pruebas por propiedades.
