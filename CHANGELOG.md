@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-22
+
+Versión de mantenimiento: seguimiento de la auditoría de seguridad, procedimiento de commit y pruebas por propiedades.
+
 ### Añadido
 - **Pruebas por propiedades de la entrada hostil** (`test/property.test.ts`, fast-check): 15 invariantes sobre el
   filtro de `table_contents`, el saneado de errores, el HTML de documentación y feeds, los nombres que acaban en una
@@ -22,14 +26,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   y las columnas genéricas `PASSWD` / `PASSWORD`, en cualquier tabla, también cuando llegan por un `SELECT *` (se
   comprueban las columnas del resultado y, si aparece una, no se muestra nada). Detectado al revisar la configuración
   ICF de un servicio.
-
-### Seguridad
 - Seguimiento de la auditoría (prioridades 1 y 2 del auditor y DZ-30): **permisos de `systems.json` en Windows**
   comprobados por ACL y SID (antes no se comprobaba nada en esa plataforma), fail-closed si no se pueden leer;
   **registro de auditoría firmado con HMAC-SHA256** con clave en el llavero del SO (quitar firmas se detecta), y
   `audit:verify` comprueba cadena y firmas; el escáner falla si `package.json` declara scripts de instalación.
-
-### Seguridad
 - **Auditoría de seguridad del 21-09-2026** (30 hallazgos, ninguno alto ni crítico): corregidos todos los accionables.
   Los más relevantes: la escritura ya no aplica un diff aprobado sobre un objeto que cambió en SAP después de la vista
   previa (huella comprobada bajo el bloqueo); filtro de `table_contents` por lista blanca; usuarios SAP validados en
@@ -40,8 +40,6 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   procesos y lectura de la cola; marcado neutralizado tras decodificar HTML; ids online de `docs_fetch` validados ya
   decodificados. Documentado lo que cada control garantiza y lo que no (token frente a elicitación, cadena de
   auditoría sin secreto, aviso de «dato» probabilístico). Tests de regresión en `test/audit-2026-09.test.ts`.
-
-### Seguridad
 - **Procedimiento de seguridad en cada commit** ([docs/COMMIT_SECURITY.md](docs/COMMIT_SECURITY.md)): el `pre-commit`
   revisa el código completo y el contenido exacto preparado; un `pre-push` nuevo y el CI revisan todo el historial de
   todas las ramas. El escáner detecta además direcciones (IPs reales, hosts con puertos de SAP, dominios internos),
