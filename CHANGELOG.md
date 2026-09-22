@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Cambiado
+- La release de GitHub adjunta el bundle de la atestación también como `<paquete>.intoto.jsonl`, además de
+  `.sigstore.json`. Es el mismo bundle in-toto con los dos nombres: uno es el que verifica `gh attestation verify` y el
+  otro el que las herramientas de cadena de suministro reconocen como procedencia (OpenSSF Scorecard entre ellas).
+
 ### Seguridad
 - El veto de datos sensibles incluye `ICF_PASSWD` (contraseña del usuario de inicio de sesión fijo de un servicio ICF)
   y las columnas genéricas `PASSWD` / `PASSWORD`, en cualquier tabla, también cuando llegan por un `SELECT *` (se

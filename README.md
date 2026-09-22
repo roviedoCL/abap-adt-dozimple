@@ -308,7 +308,8 @@ MCP client registration:
 
 Every release is published from CI with [npm provenance](https://docs.npmjs.com/generating-provenance-statements):
 `npm view @dozimple/abap-adt@1.0.0 dist.attestations` shows the attestation, and the GitHub release carries the
-tarball, its Sigstore bundle and the SBOM.
+tarball, its Sigstore bundle (`.sigstore.json`), the same bundle as in-toto provenance (`.intoto.jsonl`) and the
+SBOM. To check it: `gh attestation verify dozimple-abap-adt-1.0.0.tgz --repo <owner>/abap-adt-dozimple`.
 
 ### From source
 
