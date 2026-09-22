@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Cambiado
+- Insignia de **OpenSSF Best Practices (Passing)** en el README: el proyecto cumple los 67 criterios del nivel
+  Passing, incluidas las sugerencias, con la ficha pública en https://www.bestpractices.dev/projects/14759.
 - El job de publicación usa Node 24, que ya trae npm >= 11.5.1: se quita la instalación global de npm, que no se
   puede fijar por hash. Un paso comprueba la versión y falla antes de publicar si no la cumple. El build sigue en
   Node 22, la versión mínima que soporta el servidor.

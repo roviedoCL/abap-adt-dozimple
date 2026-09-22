@@ -4,7 +4,7 @@
 
 [English](README.md) · **Español**
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1) ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14759/badge)](https://www.bestpractices.dev/projects/14759) ![Node 22+](https://img.shields.io/badge/node-22%2B-2f7d32) ![MCP](https://img.shields.io/badge/MCP-stdio-5a4fcf) ![SAP](https://img.shields.io/badge/SAP-ECC%20%7C%20S%2F4HANA-0a6ed1) ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 **IA que trabaja en tu SAP con las reglas de un consultor senior.**
 
