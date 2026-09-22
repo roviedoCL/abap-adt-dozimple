@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Añadido
+- **Pruebas por propiedades de la entrada hostil** (`test/property.test.ts`, fast-check): 15 invariantes sobre el
+  filtro de `table_contents`, el saneado de errores, el HTML de documentación y feeds, los nombres que acaban en una
+  ruta ADT, `SAP_USER_RE` y la huella de los tokens de confirmación. En vez de comprobar casos conocidos, cada prueba
+  afirma lo que la función garantiza para **cualquier** entrada y el generador busca el contraejemplo (miles por
+  ejecución; `FC_RUNS=5000 npm test` para una pasada profunda). Validadas rompiendo el código a propósito: cada
+  propiedad detecta la regresión que le toca.
+
 ### Cambiado
 - La release de GitHub adjunta el bundle de la atestación también como `<paquete>.intoto.jsonl`, además de
   `.sigstore.json`. Es el mismo bundle in-toto con los dos nombres: uno es el que verifica `gh attestation verify` y el
