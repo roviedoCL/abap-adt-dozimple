@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Añadido
+- **`dumps(group_by, days)`: los errores más frecuentes de un periodo.** Cuenta los dumps de los últimos N días (hasta
+  90) agrupados por error, programa, error+programa, usuario o día, con primer y último caso, usuarios distintos
+  afectados y dónde terminó el más reciente (include y línea); salida estructurada. Los grupos salen de la cabecera
+  de ST22 (`SNAP_BEG.FLIST`, solo metadatos: `SNAP`, que guarda valores de variables, sigue vetada), porque el feed
+  ADT solo trae los dumps más recientes: en un 7.50 real devolvió 5 con miles en ST22, y su parámetro `from` no
+  amplía la ventana. En sistemas con datos productivos no se agrupa por usuario (columna personal); el número de
+  usuarios afectados sí se da. Cierra el hueco anotado el 11-09.
+
 ## [1.1.0] - 2026-09-22
 
 Tool nueva y contrato MCP ampliado (salida estructurada, progreso, cancelación) más resiliencia de conexión: el sprint 1 y parte del 2 del plan de mejoras.
