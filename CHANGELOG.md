@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-22
+
+Tool nueva y contrato MCP ampliado (salida estructurada, progreso, cancelación) más resiliencia de conexión: el sprint 1 y parte del 2 del plan de mejoras.
+
 ### Añadido
 - **Progreso y cancelación** (sprint 2 del plan): las tools largas informan de su avance (`transport_diff` objeto a
   objeto; `run_atc`, `where_used` y `run_unit_tests` por fase) y el cliente lo recibe como notificaciones de progreso
