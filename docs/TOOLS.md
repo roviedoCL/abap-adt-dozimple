@@ -1,13 +1,13 @@
 # Referencia de tools — abap-adt-doZimple
 
-Generado desde el código con `npm run docs`. 50 tools en 9 grupos y 3 flujos guiados.
+Generado desde el código con `npm run docs`. 51 tools en 9 grupos y 3 flujos guiados.
 Producto de [DoZimple](https://dozimple.cl).
 
 ## Índice
 
 - [Revisión de código y pases](#revision) — 5 tools: `transport_diff`, `transport_contents`, `co_change`, `inactive_objects`, `edit_preflight`
 - [Calidad, ATC y remediación](#calidad) — 6 tools: `run_atc`, `atc_quickfix`, `api_release_state`, `sap_notes`, `syntax_check`, `run_unit_tests`
-- [Exploración del repositorio](#exploracion) — 10 tools: `search_objects`, `get_source`, `where_used`, `source_search`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`
+- [Exploración del repositorio](#exploracion) — 11 tools: `search_objects`, `get_source`, `where_used`, `source_search`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`, `enhancements`
 - [Consulta de datos](#datos) — 2 tools: `sql_query`, `table_contents`
 - [Diagnóstico de incidentes](#diagnostico) — 4 tools: `dumps`, `jobs`, `application_log`, `gateway_errors`
 - [Documentación SAP](#documentacion) — 7 tools: `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint`, `docs_community_search`
@@ -466,6 +466,37 @@ Lee los símbolos de texto (TEXT-001…), textos de selección o encabezados de 
 | `category` | `symbols` \| `selections` \| `headings` | "symbols" |  |
 
 \* obligatorio
+
+### `enhancements` — Ampliaciones y BAdI
+
+Qué ampliaciones hay y dónde. badi=NOMBRE: implementaciones de esa BAdI, nuevas y clásicas, activas o no. program + program_type (PROG, CLAS, FUGR): ampliaciones de código (puntos y secciones implícitos o explícitos) implementadas dentro de ese programa, clase o grupo — lo que cambia el comportamiento de un estándar sin tocar su código. prefix (p. ej. Z): implementaciones de ampliación de ese espacio de nombres, por tipo. Solo lectura.
+
+| | |
+|---|---|
+| **Acceso** | Solo lectura |
+| **Créditos** | [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) — Marcello Urbani (MIT, dependencia)<br>[vibing-steampunk](https://github.com/oisee/vibing-steampunk) — oisee y contribuidores (MIT, idea) |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
+| `badi` | string |  | Definición de BAdI, p. ej. MB_MIGO_BADI |
+| `program` | string |  | Programa, clase o grupo de funciones ampliado, p. ej. SAPMV45A |
+| `program_type` | `PROG` \| `CLAS` \| `FUGR` | "PROG" |  |
+| `prefix` | string |  | Implementaciones cuyo nombre empieza así, p. ej. Z o ZSD |
+| `tool_type` | string |  | Con prefix: filtrar por tipo, p. ej. BADI_IMPL o HOOK_IMPL |
+| `max` | number | 200 |  |
+
+\* obligatorio
+
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `mode` | `badi` \| `program` \| `prefix` |  |
+| `target` | string |  |
+| `rows` | lista de record |  |
+| `total` | number |  |
+| `truncated` | boolean |  |
 
 <a id="datos"></a>
 ## Consulta de datos
