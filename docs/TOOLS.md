@@ -464,7 +464,7 @@ Filas de una tabla, vista o CDS, con columnas y filtro opcionales. Atajo de sql_
 
 ### `dumps` — Dumps (ST22)
 
-Lista los dumps de ejecución (ST22): fecha, error, programa, usuario y texto corto. Filtra por usuario y por texto (error o programa). Con detail=N devuelve el dump N completo (qué pasó, análisis, dónde terminó, fuente, pila).
+Lista los dumps de ejecución (ST22): fecha, error, programa, usuario y texto corto. Filtra por usuario y por texto (error o programa). Con detail=N devuelve el dump N completo (qué pasó, análisis, dónde terminó, fuente, pila). Con group_by (error, program, error_program, user, day) y days=N responde «los errores más frecuentes del periodo»: cuenta los dumps de los últimos N días agrupados, con primer y último caso, usuarios afectados y dónde terminó. La lista y el detalle salen del feed ADT (solo los más recientes); los grupos, de la cabecera de ST22 (SNAP_BEG).
 
 | | |
 |---|---|
@@ -479,8 +479,23 @@ Lista los dumps de ejecución (ST22): fecha, error, programa, usuario y texto co
 | `contains` | string |  | Filtra por error o programa, p. ej. CALL_FUNCTION_NOT_FOUND o ZFI_REPORTE |
 | `max` | number | 20 |  |
 | `detail` | number |  | Número de la lista para ver el dump completo |
+| `group_by` | `error` \| `program` \| `error_program` \| `user` \| `day` |  | Agrupar los dumps del periodo: por error, programa, error+programa, usuario o día |
+| `days` | number | 7 | Periodo hacia atrás para group_by (días) |
 
 \* obligatorio
+
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `mode` | `list` \| `detail` \| `groups` |  |
+| `total` | number | Dumps considerados (feed leído o filas del periodo) |
+| `period_days` | number |  |
+| `since` | string | AAAAMMDD desde el que se contó |
+| `truncated` | boolean | true si el periodo tiene más dumps de los que se pudieron leer |
+| `group_by` | `error` \| `program` \| `error_program` \| `user` \| `day` |  |
+| `groups` | lista de { key, count, first, last, users, where } |  |
+| `dumps` | lista de { n, error, program, user } |  |
 
 ### `jobs` — Jobs de fondo (SM37)
 
