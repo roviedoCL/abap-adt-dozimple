@@ -18,10 +18,13 @@ export default defineTool({
     max_results: z.number().int().min(1).max(1000).default(100),
     snippets: z.boolean().default(false),
   },
-  async run({ object_name, object_type, max_results, snippets }, { sap }) {
+  async run({ object_name, object_type, max_results, snippets }, ctx) {
+    const { sap } = ctx;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
+    ctx.progress?.(`Buscando usos de ${obj.name} (en objetos muy usados tarda hasta un minuto)…`);
     const refs = (await c.usageReferences(obj.uri)).filter((r) => r.isResult);
+    ctx.signal?.throwIfAborted();
     if (!refs.length) return `${obj.name} (${obj.type}): el where-used se ejecutó y no encontró usos estáticos.`;
 
     const shown = refs.slice(0, max_results);
@@ -35,6 +38,7 @@ export default defineTool({
       );
 
     if (snippets) {
+      ctx.progress?.(`${refs.length} usos; leyendo fragmentos de los primeros ${Math.min(shown.length, 30)}…`);
       const sn = await c.usageReferenceSnippets(shown.slice(0, 30));
       const lines = sn.flatMap((s) =>
         s.snippets.map((x) => `${s.objectIdentifier}  L${x.uri?.start?.line ?? "?"}: ${x.content.trim()}`),

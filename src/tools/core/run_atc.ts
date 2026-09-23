@@ -8,7 +8,7 @@ import { sourceObjectsOf } from "../../core/revisions.js";
 import { budget } from "../../core/output.js";
 import { resolveByTypePrefix, resolveObject, sqlLiteral, TYPE_HELP } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
-import { defineTool } from "../../core/tool.js";
+import { defineTool, type ToolContext } from "../../core/tool.js";
 
 const decode = decodeEntities;
 const strip = htmlToText;
@@ -27,9 +27,10 @@ interface RunOpts {
 }
 
 /** Ejecuta el ATC del alcance y lo recuerda bajo ese alcance. */
-async function execute(c: ADTClient, sap: SapConnection, systemId: string, t: Target, o: RunOpts): Promise<AtcRunOutcome> {
+async function execute(c: ADTClient, sap: SapConnection, systemId: string, t: Target, o: RunOpts, ctx?: ToolContext): Promise<AtcRunOutcome> {
   const variant = o.variant ?? (await defaultVariant(c));
   let res: AtcRunOutcome;
+  ctx?.progress?.(`ATC de ${t.scope} con la variante ${variant}…`);
   try {
     res = await runAtc(c, t.uri, variant, o.max_findings, o.include_exempted);
     res.scope = t.scope;
@@ -49,6 +50,8 @@ async function execute(c: ADTClient, sap: SapConnection, systemId: string, t: Ta
     ];
     const uris = (await Promise.all(refs.map((r) => resolveByTypePrefix(c, r.name, r.types)))).filter(Boolean).map((r) => r!.uri);
     if (!uris.length) throw new ToolError("NOT_FOUND", `La orden ${tr} no contiene objetos que el ATC pueda revisar.`);
+    ctx?.signal?.throwIfAborted();
+    ctx?.progress?.(`Este release no admite la orden como conjunto: ATC sobre sus ${uris.length} objetos en una corrida…`);
     res = await runAtc(c, uris, variant, o.max_findings, o.include_exempted);
     res.scope = `orden ${tr} (sus ${uris.length} objetos: este release no admite la orden como conjunto ATC)`;
   }
@@ -83,7 +86,8 @@ export default defineTool({
       .optional()
       .describe("Documentación del hallazgo N del ATC del objeto u orden indicados (sin ellos: del último ATC, y lo dice)"),
   },
-  async run(a, { sap, system }) {
+  async run(a, ctx) {
+    const { sap, system } = ctx;
     const c = await sap.adt();
 
     // El alcance (objeto u orden nombrados) se resuelve antes que nada: explain=N es SIEMPRE de ese alcance.
@@ -101,7 +105,7 @@ export default defineTool({
       let run = target ? recallRun(system.id, target.key) : recallRun(system.id);
       let ranNow = false;
       if (!run && target) {
-        run = await execute(c, sap, system.id, target, opts);
+        run = await execute(c, sap, system.id, target, opts, ctx);
         ranNow = true;
       }
       if (!run) throw new ToolError("INPUT", "No hay un ATC previo en esta sesión: indica object_name o transport.");
@@ -114,7 +118,7 @@ export default defineTool({
     }
 
     if (!target) throw new ToolError("INPUT", "Indica object_name o transport.");
-    const res = await execute(c, sap, system.id, target, opts);
+    const res = await execute(c, sap, system.id, target, opts, ctx);
 
     const shown = res.findings.filter((f) => !a.priorities || a.priorities.includes(f.priority));
     const byPrio = [1, 2, 3, 4].map((p) => res.findings.filter((f) => f.priority === p).length);

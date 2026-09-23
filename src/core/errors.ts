@@ -13,6 +13,7 @@ export type ErrorKind =
   | "CAPABILITY"  // este release no expone el endpoint ADT necesario
   | "MODULE"      // tool de un cliente no habilitada en este sistema
   | "INPUT"       // parámetros inválidos
+  | "CANCELLED"   // el cliente canceló la petición: no es un fallo del servidor
   | "INTERNAL";
 
 export class ToolError extends Error {
@@ -37,6 +38,8 @@ function errCode(e: any): string | undefined {
 export function normalizeError(e: unknown, systemId?: string): ToolError {
   if (e instanceof ToolError) return e;
   const any = e as any;
+  // signal.throwIfAborted() entre pasos de una tool larga: cancelación del cliente, no fallo del servidor.
+  if (any?.name === "AbortError") return new ToolError("CANCELLED", "Cancelado por el cliente antes de terminar.");
   const code = errCode(any);
 
   if (code && NETWORK_CODES.has(code)) {
@@ -88,6 +91,7 @@ export function renderError(te: ToolError): string {
     CAPABILITY: "No disponible en este sistema",
     MODULE: "Módulo no habilitado",
     INPUT: "Parámetros inválidos",
+    CANCELLED: "Cancelado",
     INTERNAL: "Error interno",
   };
   return `${labels[te.kind]}: ${te.message}${te.hint ? `\n${te.hint}` : ""}\n` +
