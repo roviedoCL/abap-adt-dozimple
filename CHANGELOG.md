@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+- **`enhancements`: ampliaciones y BAdI.** Tres preguntas en una tool, por SQL de diccionario (7.50 y S/4):
+  implementaciones de una BAdI, nuevas y clásicas, activas o no, con las propias (Z/Y) primero; ampliaciones de código
+  implementadas dentro de un programa, clase o grupo de funciones, avisando de las que **sustituyen** código estándar
+  (overwrite); y todas las implementaciones de un espacio de nombres por tipo, con el total real. Lo que cambia el
+  comportamiento de un estándar sin tocar su código, que es lo primero a mirar en un incidente. Verificado en vivo en
+  un 7.50: 1.070 implementaciones Z (566 de código, 501 de BAdI).
 - **`sap_notes`: estado de notas SAP en el sistema, como en SNOTE**, sin portal ni S-user: si la nota está descargada,
   estado de implementación y de tratamiento, versión, componente y título (español si existe). Por notas concretas
   («¿está la 2198647 en PRD?») o filtrando por estado y/o prefijo de componente, con el total real. Distingue «no

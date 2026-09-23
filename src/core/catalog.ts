@@ -88,6 +88,7 @@ export const GROUPS: Group[] = [
       { name: "transaction_info", credits: ["abapAdtApi", "marioAdt"] },
       { name: "function_modules", credits: ADT },
       { name: "text_elements", credits: ADT },
+      { name: "enhancements", credits: ["abapAdtApi", "vsp"] },
     ],
   },
   {
