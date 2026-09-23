@@ -29,6 +29,7 @@ export const TOOLS_EN: Record<string, string> = {
   search_objects: "**Search ABAP objects.** Searches repository objects by name (supports * wildcards).",
   get_source: "**Read ABAP source.** Reads the source of any object: program, include, class (and its includes), interface, function module (without knowing its group), CDS, table/structure, etc.",
   where_used: "**Where used.** Where-used list of an object: who references it, with package and owner.",
+  source_search: "**Search text in source code.** Searches a text or regex in the source of a package (with subpackages), a transport or a list of objects, and returns object, include, line and the matching line; reaches what where-used misses (dynamic calls, literals, Z code outside the reference index).",
   object_versions: "**Object versions.** Version history of an object (date, author, transport).",
   package_contents: "**Package contents.** Objects of a development package grouped by type, with subpackages (TADIR/TDEVC, any release).",
   ddic_type_info: "**Data element, domain or table type.** Definition of a DDIC type: data element (domain, type, length, texts), domain (type, length, fixed values, value table) or table type (line type, key).",

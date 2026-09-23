@@ -1,13 +1,13 @@
 # Referencia de tools — abap-adt-doZimple
 
-Generado desde el código con `npm run docs`. 48 tools en 9 grupos y 3 flujos guiados.
+Generado desde el código con `npm run docs`. 49 tools en 9 grupos y 3 flujos guiados.
 Producto de [DoZimple](https://dozimple.cl).
 
 ## Índice
 
 - [Revisión de código y pases](#revision) — 5 tools: `transport_diff`, `transport_contents`, `co_change`, `inactive_objects`, `edit_preflight`
 - [Calidad, ATC y remediación](#calidad) — 5 tools: `run_atc`, `atc_quickfix`, `api_release_state`, `syntax_check`, `run_unit_tests`
-- [Exploración del repositorio](#exploracion) — 9 tools: `search_objects`, `get_source`, `where_used`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`
+- [Exploración del repositorio](#exploracion) — 10 tools: `search_objects`, `get_source`, `where_used`, `source_search`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`
 - [Consulta de datos](#datos) — 2 tools: `sql_query`, `table_contents`
 - [Diagnóstico de incidentes](#diagnostico) — 4 tools: `dumps`, `jobs`, `application_log`, `gateway_errors`
 - [Documentación SAP](#documentacion) — 7 tools: `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint`, `docs_community_search`
@@ -297,6 +297,41 @@ Lista de uso (where-used) de un objeto: quién lo referencia, con paquete y resp
 | `snippets` | boolean | false |  |
 
 \* obligatorio
+
+### `source_search` — Buscar texto en el código
+
+Busca un texto (o una expresión regular) en el código fuente de un paquete (con subpaquetes), de una orden de transporte o de una lista de objetos, y devuelve objeto, include, línea y la línea encontrada. Sirve donde where_used no llega: llamadas dinámicas, literales, código Z que el índice de referencias no cubre. Lee cada fuente, así que exige un alcance y tiene tope de objetos; los objetos que no se pudieron leer se listan aparte.
+
+| | |
+|---|---|
+| **Acceso** | Solo lectura |
+| **Créditos** | [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) — Marcello Urbani (MIT, dependencia)<br>[vibing-steampunk](https://github.com/oisee/vibing-steampunk) — oisee y contribuidores (MIT, idea) |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
+| `text` * | string |  | Texto a buscar (sin distinguir mayúsculas), p. ej. RV_FLOW o 'CALL FUNCTION' |
+| `regex` | boolean | false | Tratar text como expresión regular (máx. 200 caracteres) |
+| `package` | string |  | Alcance: paquete de desarrollo |
+| `include_subpackages` | boolean | true |  |
+| `transport` | string |  | Alcance: orden (o tarea) de transporte |
+| `objects` | lista de string |  | Alcance: lista de objetos por nombre |
+| `ignore_comments` | boolean | false | No contar líneas de comentario |
+| `max_objects` | number | 150 |  |
+| `max_hits` | number | 300 |  |
+
+\* obligatorio
+
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `scope` | string |  |
+| `objects_in_scope` | number |  |
+| `scanned` | number | Objetos leídos |
+| `truncated` | boolean | true si el alcance tenía más objetos que max_objects o más coincidencias que max_hits |
+| `hits` | lista de { object, type, include, line, text } |  |
+| `skipped` | lista de { object, reason } | Objetos que no se pudieron leer |
 
 ### `object_versions` — Versiones de un objeto
 
