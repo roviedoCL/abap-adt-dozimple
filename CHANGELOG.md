@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+### Añadido
+- **`revert_source`: volver a una versión anterior con confirmación.** Tras un `write_source` cuya activación falló,
+  el objeto queda con un borrador inactivo encima de la versión activa; la tool vuelve a escribir la versión elegida
+  (`active`: la última activa; `previous`: la anterior a la activa; `N`: una del historial de `object_versions`)
+  pasando por la misma vista previa, huella, bloqueo y orden que cualquier escritura. Nunca revierte por su cuenta:
+  un rollback automático que pisara una versión sin preguntar sería peor que dejar el objeto inactivo.
 - **Resiliencia de conexión** (sprint 1 del plan de mejoras):
   - **Sesión caducada renovada en las lecturas.** Si una tool de lectura recibe un token CSRF rechazado o un 401 en
     una sesión que ya había entrado, el servidor descarta el cliente, vuelve a entrar y repite la lectura una vez;

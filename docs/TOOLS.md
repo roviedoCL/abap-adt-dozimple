@@ -1,6 +1,6 @@
 # Referencia de tools — abap-adt-doZimple
 
-Generado desde el código con `npm run docs`. 47 tools en 9 grupos y 3 flujos guiados.
+Generado desde el código con `npm run docs`. 48 tools en 9 grupos y 3 flujos guiados.
 Producto de [DoZimple](https://dozimple.cl).
 
 ## Índice
