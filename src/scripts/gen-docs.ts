@@ -74,6 +74,12 @@ function toolSection(d: ToolDef<any>, credits: Array<keyof typeof CREDITS>): str
     for (const p of params) out.push(`| \`${p.k}\`${p.optional ? "" : " *"} | ${p.type} | ${p.def ?? ""} | ${p.desc} |`);
     out.push("", "\\* obligatorio", "");
   } else out.push("Sin parámetros.", "");
+  if (d.output) {
+    const fields = Object.entries(d.output as Record<string, ZodTypeAny>).map(([k, t]) => ({ k, ...describeParam(t) }));
+    out.push("Salida estructurada (`structuredContent`, además del texto):", "", "| Campo | Tipo | Descripción |", "|---|---|---|");
+    for (const f of fields) out.push(`| \`${f.k}\` | ${f.type} | ${f.desc} |`);
+    out.push("");
+  }
   return out.join("\n");
 }
 
