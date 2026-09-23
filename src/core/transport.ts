@@ -64,6 +64,14 @@ export async function orderHeaders(sap: SapConnection, trkorrs: string[]): Promi
   return out;
 }
 
+/** Entradas E071 de una orden y de todas sus tareas. */
+export async function orderEntries(sap: SapConnection, root: string): Promise<Array<{ PGMID: string; OBJECT: string; OBJ_NAME: string }>> {
+  const tasks = await sap.query(`SELECT trkorr FROM e070 WHERE strkorr = ${sqlLiteral(root)}`, 500);
+  const ids = [root, ...tasks.values.map((v) => v.TRKORR as string)];
+  const rows = await sap.query(`SELECT pgmid, object, obj_name FROM e071 WHERE trkorr IN ( ${ids.map(sqlLiteral).join(", ")} )`, 5000);
+  return rows.values as unknown as Array<{ PGMID: string; OBJECT: string; OBJ_NAME: string }>;
+}
+
 export function describeOrder(h: OrderHeader): string {
   return (
     `${h.trkorr} «${h.text}» · ${TRFUNCTION[h.trfunction] ?? h.trfunction} · ${TRSTATUS[h.trstatus] ?? h.trstatus} · ` +

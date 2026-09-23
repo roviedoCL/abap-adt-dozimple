@@ -80,6 +80,7 @@ export const GROUPS: Group[] = [
       { name: "search_objects", credits: ["abapAdtApi", "marioAdt"] },
       { name: "get_source", credits: ["abapAdtApi", "marioAdt"] },
       { name: "where_used", credits: ADT },
+      { name: "source_search", credits: ["abapAdtApi", "vsp"] },
       { name: "object_versions", credits: ADT },
       { name: "package_contents", credits: ["abapAdtApi", "marioAdt"] },
       { name: "ddic_type_info", credits: ["abapAdtApi", "marioAdt"] },

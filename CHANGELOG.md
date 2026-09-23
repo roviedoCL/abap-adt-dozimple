@@ -5,6 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+- **`source_search`: buscar texto en el código de un paquete, una orden o una lista de objetos.** Texto literal o
+  expresión regular (máx. 200 caracteres), sin distinguir mayúsculas; devuelve objeto, include, línea y la línea
+  encontrada, con salida estructurada. Lee cada fuente (programas, clases con sus includes locales, interfaces,
+  módulos e includes propios de los grupos de funciones, CDS) con 4 lecturas en paralelo, progreso y cancelación;
+  exige un alcance, tiene tope de objetos (150 por defecto, ~0,8 s por objeto medido en 7.50) y lista aparte los
+  objetos que no pudo leer. Existe porque ADT no tiene búsqueda de texto en NW 7.50 (`textsearch` da 404 y no está
+  en el discovery), y llega donde `where_used` no: verificado en vivo, `where_used` no encontró ningún uso de una
+  clase de excepción y `source_search` encontró 49 en 6 objetos del mismo paquete.
 - **`dumps(group_by, days)`: los errores más frecuentes de un periodo.** Cuenta los dumps de los últimos N días (hasta
   90) agrupados por error, programa, error+programa, usuario o día, con primer y último caso, usuarios distintos
   afectados y dónde terminó el más reciente (include y línea); salida estructurada. Los grupos salen de la cabecera
@@ -12,6 +20,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   ADT solo trae los dumps más recientes: en un 7.50 real devolvió 5 con miles en ST22, y su parámetro `from` no
   amplía la ventana. En sistemas con datos productivos no se agrupa por usuario (columna personal); el número de
   usuarios afectados sí se da. Cierra el hueco anotado el 11-09.
+
+### Corregido
+- `package_contents` listaba objetos **borrados** que TADIR conserva con `DELFLAG = 'X'`; ahora no aparecen.
 
 ## [1.1.0] - 2026-09-22
 

@@ -4,6 +4,7 @@ import { diffLines, unified } from "../../core/diff.js";
 import { normalizeError, ToolError } from "../../core/errors.js";
 import { resolveByTypePrefix, sqlLiteral } from "../../core/objects.js";
 import { assertTrkorr } from "../../core/policy.js";
+import { pool } from "../../core/concurrency.js";
 import { selectRevisionPair, sourceObjectsOf, versionNumber, type SourceObjectRef } from "../../core/revisions.js";
 import { describeOrder, orderHeaders } from "../../core/transport.js";
 import { defineTool } from "../../core/tool.js";
@@ -12,21 +13,6 @@ const resolveRef = (c: ADTClient, ref: SourceObjectRef) => resolveByTypePrefix(c
 
 const label = (r?: Revision) =>
   r ? `${r.version || "sin orden"} (v${versionNumber(r) || "?"}, ${r.date.slice(0, 10)}, ${r.author})` : "—";
-
-/** Limita cuántas promesas corren a la vez (no saturar SAP). */
-async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(n, items.length) }, async () => {
-      while (next < items.length) {
-        const i = next++;
-        out[i] = await fn(items[i]);
-      }
-    }),
-  );
-  return out;
-}
 
 export default defineTool({
   name: "transport_diff",

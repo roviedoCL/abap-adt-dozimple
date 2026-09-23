@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ToolError } from "../../core/errors.js";
 import { sqlLiteral } from "../../core/objects.js";
+import { packageObjects, packageTree } from "../../core/packages.js";
 import { defineTool } from "../../core/tool.js";
 
 export default defineTool({
@@ -23,23 +24,8 @@ export default defineTool({
     if (!h) throw new ToolError("NOT_FOUND", `El paquete ${root} no existe en este sistema.`);
     const txt = await sap.query(`SELECT ctext FROM tdevct WHERE devclass = ${sqlLiteral(root)}`, 1);
 
-    // Árbol de subpaquetes (hasta 5 niveles si es recursivo).
-    const packages = [root];
-    const subs: string[] = [];
-    let frontier = [root];
-    for (let level = 0; level < (recursive ? 5 : 1) && frontier.length; level++) {
-      const r = await sap.query(`SELECT devclass FROM tdevc WHERE parentcl IN ( ${frontier.map(sqlLiteral).join(", ")} )`, 2000);
-      frontier = r.values.map((v) => v.DEVCLASS as string);
-      subs.push(...frontier);
-      if (recursive) packages.push(...frontier);
-    }
-
-    const typeFilter = object_type ? ` AND object = ${sqlLiteral(object_type.toUpperCase())}` : "";
-    const objs = await sap.query(
-      `SELECT devclass, object, obj_name FROM tadir WHERE pgmid = 'R3TR' AND devclass IN ( ${packages.map(sqlLiteral).join(", ")} )` +
-        `${typeFilter} AND object <> 'DEVC' ORDER BY object, obj_name`,
-      max_objects,
-    );
+    const { packages, subs } = await packageTree(sap, root, recursive);
+    const objs = { values: await packageObjects(sap, packages, max_objects, object_type) };
 
     const byType = new Map<string, string[]>();
     for (const o of objs.values) {
