@@ -195,6 +195,14 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
         if (!env.sidecars) throw new ToolError("INTERNAL", "No hay componentes auxiliares en este servidor.");
         return env.sidecars.get(name);
       },
+      signal: env.signal,
+      progress(message, current, total) {
+        try {
+          env.progress?.(message, current, total);
+        } catch {
+          /* el progreso es cortesía: un fallo al notificar nunca rompe la tool */
+        }
+      },
     };
     const head = resolved ? `Sistema: ${resolved.system.id} (${resolved.source})\n${SAP_DATA_NOTE}\n\n` : "";
 
@@ -275,15 +283,24 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+function withTimeout<T>(p: Promise<T>, ms: number, what: string, signal?: AbortSignal): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
+  let onAbort: (() => void) | undefined;
   const limit = new Promise<never>((_, reject) => {
+    if (signal) {
+      onAbort = () => reject(new ToolError("CANCELLED", `${what}: cancelado por el cliente.`));
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+    }
     timer = setTimeout(
       () => reject(new ToolError("NETWORK", `${what}: tiempo agotado (${ms >= 1000 ? `${Math.round(ms / 1000)} s` : `${ms} ms`}).`, "Acota la petición (menos objetos, más filtro) o repite más tarde.")),
       ms,
     );
   });
-  return Promise.race([p, limit]).finally(() => clearTimeout(timer)) as Promise<T>;
+  return Promise.race([p, limit]).finally(() => {
+    clearTimeout(timer);
+    if (signal && onAbort) signal.removeEventListener("abort", onAbort);
+  }) as Promise<T>;
 }
 
 /**
@@ -293,7 +310,10 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
  */
 async function runGuarded(def: ToolDef, args: Record<string, unknown>, ctx: ToolContext, sapConn: SapConnection | undefined, systemId?: string) {
   const ms = def.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const attempt = () => withTimeout(def.run(args, ctx), ms, def.name);
+  const attempt = () => {
+    if (ctx.signal?.aborted) throw new ToolError("CANCELLED", `${def.name}: cancelado por el cliente.`);
+    return withTimeout(def.run(args, ctx), ms, def.name, ctx.signal);
+  };
   try {
     return await attempt();
   } catch (e) {
@@ -385,8 +405,15 @@ export function registerAll(
         ...(def.output ? { outputSchema: z.object(def.output) } : {}),
         annotations: annotationsFor(def),
       },
-      (async (args: Record<string, unknown>) => {
-        const r = await invoke(def, args ?? {}, { config, pool, tools: defs, sidecars, elicit: elicitFor(server) });
+      (async (args: Record<string, unknown>, extra: { signal?: AbortSignal; _meta?: { progressToken?: string | number }; sendNotification?: (n: unknown) => Promise<void> }) => {
+        const token = extra?._meta?.progressToken;
+        const progress =
+          token !== undefined && extra?.sendNotification
+            ? (message: string, current?: number, total?: number) => {
+                void extra.sendNotification!({ method: "notifications/progress", params: { progressToken: token, progress: current ?? 0, total, message } }).catch(() => undefined);
+              }
+            : undefined;
+        const r = await invoke(def, args ?? {}, { config, pool, tools: defs, sidecars, elicit: elicitFor(server), signal: extra?.signal, progress });
         return {
           content: [{ type: "text" as const, text: r.text }],
           isError: r.isError,

@@ -24,9 +24,11 @@ export default defineTool({
     object_name: z.string().min(1),
     object_type: z.string().default("CLAS").describe(TYPE_HELP),
   },
-  async run({ object_name, object_type }, { sap }) {
+  async run({ object_name, object_type }, ctx) {
+    const { sap } = ctx;
     const c = await sap.adt();
     const obj = await resolveObject(c, object_name, object_type);
+    ctx.progress?.(`Ejecutando ABAP Unit de ${obj.name} (solo tests harmless y short)…`);
     const classes = await c.unitTestRun(obj.uri, { ...SAFE_TEST_FLAGS });
     if (!classes.length) return { text: `${obj.name}: no se encontraron clases de test. No se ejecutó nada.`, isError: true };
 

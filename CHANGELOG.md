@@ -5,6 +5,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+- **Progreso y cancelación** (sprint 2 del plan): las tools largas informan de su avance (`transport_diff` objeto a
+  objeto; `run_atc`, `where_used` y `run_unit_tests` por fase) y el cliente lo recibe como notificaciones de progreso
+  MCP si las pidió. La cancelación del cliente se respeta **entre pasos**: el paso en curso termina (una llamada ADT
+  no se puede abortar) y el siguiente ya no empieza. Una petición cancelada termina como `CANCELLED`, un tipo propio
+  que no cuenta como fallo del servidor ni abre el circuito.
 - **Salida estructurada** (`outputSchema` / `structuredContent` de MCP), sprint 2 del plan: una tool puede declarar
   `output` y devolver los mismos datos del texto de forma tipada, para que el cliente no tenga que interpretar la
   prosa. El registro exige que toda respuesta no errónea de esas tools la traiga (si falta es error del servidor,

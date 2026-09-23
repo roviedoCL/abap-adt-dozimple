@@ -46,7 +46,8 @@ export default defineTool({
     max_objects: z.number().int().min(1).max(60).default(20),
     max_diff_lines: z.number().int().min(20).max(3000).default(300).describe("Tope de líneas de diff por objeto"),
   },
-  async run({ transport, objects, context, summary_only, max_objects, max_diff_lines }, { sap }) {
+  async run({ transport, objects, context, summary_only, max_objects, max_diff_lines }, ctx) {
+    const { sap } = ctx;
     const tr = assertTrkorr(transport);
     const heads = await orderHeaders(sap, [tr]);
     const head = heads.get(tr);
@@ -64,7 +65,11 @@ export default defineTool({
     const shown = selected.slice(0, max_objects);
 
     const c = await sap.adt();
+    let done = 0;
+    ctx.progress?.(`Comparando ${shown.length} objetos de ${root}…`, 0, shown.length);
     const blocks = await pool(shown, 4, async (ref) => {
+      // Cancelación entre objetos: el que está en curso termina, el siguiente ya no empieza.
+      ctx.signal?.throwIfAborted();
       try {
         const res = await resolveRef(c, ref);
         if (!res) return { name: ref.name, text: `■ ${ref.name}: ya no existe en el sistema (¿borrado en la orden?).`, added: 0, removed: 0 };
@@ -99,6 +104,8 @@ export default defineTool({
         const te = normalizeError(e);
         if (te.kind === "NETWORK" || te.kind === "AUTH") throw te;
         return { name: ref.name, text: `■ ${ref.name}: no se pudo comparar (${te.kind}: ${te.message})`, added: 0, removed: 0 };
+      } finally {
+        ctx.progress?.(`${++done} de ${shown.length} objetos comparados`, done, shown.length);
       }
     });
 

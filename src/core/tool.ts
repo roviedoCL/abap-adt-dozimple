@@ -27,6 +27,13 @@ export interface ToolContext {
    * (dentro del bloqueo) con el estado actual y no escribe si cambió.
    */
   confirmedState?: string;
+  /**
+   * Cancelación pedida por el cliente. Las tools largas lo comprueban ENTRE pasos (`signal.throwIfAborted()`): una
+   * llamada ADT en curso no se puede abortar, así que la cancelación llega al terminar el paso actual.
+   */
+  readonly signal?: AbortSignal;
+  /** Avance de una operación larga; llega al cliente como notificación de progreso si la pidió, y si no, se ignora. */
+  progress?(message: string, current?: number, total?: number): void;
 }
 
 /** Lo que devuelve una vista previa: el texto que se muestra y, opcionalmente, la huella del estado mostrado. */
@@ -42,6 +49,10 @@ export interface ToolEnv {
    * soporta; si no, las escrituras se confirman con token en dos fases.
    */
   elicit?: (message: string) => Promise<"accept" | "decline" | "cancel">;
+  /** Señal de cancelación de la petición MCP en curso. */
+  signal?: AbortSignal;
+  /** Envío de progreso al cliente (solo si la petición trae progressToken). */
+  progress?: (message: string, current?: number, total?: number) => void;
 }
 
 /**
