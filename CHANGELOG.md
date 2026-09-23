@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+- **Salida estructurada** (`outputSchema` / `structuredContent` de MCP), sprint 2 del plan: una tool puede declarar
+  `output` y devolver los mismos datos del texto de forma tipada, para que el cliente no tenga que interpretar la
+  prosa. El registro exige que toda respuesta no errónea de esas tools la traiga (si falta es error del servidor,
+  no un éxito a medias) y el SDK la valida contra el esquema antes de responder. Primeras tools: `sql_query` (filas,
+  columnas, valores hasta 500, `truncated`, avisos) y `syntax_check` (errores, avisos y mensajes con línea y
+  severidad). `docs/TOOLS.md` documenta el esquema de salida de cada una.
 - **`revert_source`: volver a una versión anterior con confirmación.** Tras un `write_source` cuya activación falló,
   el objeto queda con un borrador inactivo encima de la versión activa; la tool vuelve a escribir la versión elegida
   (`active`: la última activa; `previous`: la anterior a la activa; `N`: una del historial de `object_versions`)

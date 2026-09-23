@@ -44,7 +44,11 @@ export interface ToolEnv {
   elicit?: (message: string) => Promise<"accept" | "decline" | "cancel">;
 }
 
-export type ToolResult = string | { text: string; isError?: boolean };
+/**
+ * Resultado de una tool: el texto que lee el modelo y, si la tool declara `output`, los mismos datos de forma
+ * estructurada (`structuredContent` del protocolo MCP) para que el cliente no tenga que interpretar el texto.
+ */
+export type ToolResult = string | { text: string; isError?: boolean; structured?: Record<string, unknown> };
 
 export interface ToolDef<S extends ZodRawShape = ZodRawShape> {
   name: string;
@@ -70,6 +74,11 @@ export interface ToolDef<S extends ZodRawShape = ZodRawShape> {
   confirm?: boolean;
   /** Tiempo máximo de una ejecución (por defecto 60 s). Las lentas (ATC, where-used, diff) declaran el suyo. */
   timeoutMs?: number;
+  /**
+   * Esquema de la salida estructurada (outputSchema de MCP). Si se declara, TODO resultado que no sea error debe
+   * traer `structured` conforme a él: el registro lo exige y el SDK lo valida antes de responder.
+   */
+  output?: ZodRawShape;
   run(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<ToolResult>;
   /**
    * Solo tools write: qué va a cambiar, sin cambiar nada (diff, sintaxis,

@@ -3,6 +3,9 @@ import { guardedQuery } from "../../core/datapolicy.js";
 import { tsv } from "../../core/output.js";
 import { defineTool } from "../../core/tool.js";
 
+/** La salida estructurada duplica el contenido del texto: se acota para no doblar respuestas enormes. */
+const STRUCTURED_ROWS = 500;
+
 export default defineTool({
   name: "sql_query",
   title: "Consulta ABAP SQL",
@@ -16,10 +19,24 @@ export default defineTool({
     query: z.string().min(1).describe("SELECT ... FROM ... WHERE ..."),
     max_rows: z.number().int().min(1).max(5000).default(100),
   },
+  output: {
+    rows: z.number().int().describe("Filas devueltas"),
+    columns: z.array(z.string()),
+    values: z.array(z.record(z.unknown())).describe(`Filas como objetos columna→valor (hasta ${STRUCTURED_ROWS}; el texto las trae todas)`),
+    truncated: z.boolean().describe("true si values no incluye todas las filas"),
+    notes: z.array(z.string()).describe("Avisos de la política de datos (enmascarado, tope de filas)"),
+  },
   async run({ query, max_rows }, { sap, system }) {
     const r = await guardedQuery(sap, system, query, max_rows);
-    if (!r.values.length) return `La consulta se ejecutó y no devolvió filas.`;
+    const structured = {
+      rows: r.values.length,
+      columns: r.columns,
+      values: r.values.slice(0, STRUCTURED_ROWS),
+      truncated: r.values.length > STRUCTURED_ROWS,
+      notes: r.notes,
+    };
+    if (!r.values.length) return { text: `La consulta se ejecutó y no devolvió filas.`, structured };
     const table = tsv(r.columns, r.values.map((v) => r.columns.map((c) => v[c])));
-    return `${r.values.length} filas\n\n${table}${r.notes.length ? `\n\n${r.notes.join("\n")}` : ""}`;
+    return { text: `${r.values.length} filas\n\n${table}${r.notes.length ? `\n\n${r.notes.join("\n")}` : ""}`, structured };
   },
 });

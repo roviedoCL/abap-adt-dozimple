@@ -206,6 +206,16 @@ Chequeo de sintaxis real de SAP (no abaplint). Si pasas `source`, se comprueba E
 
 \* obligatorio
 
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `object` | string |  |
+| `checked` | `proposed` \| `saved` | proposed = la fuente pasada sin guardar; saved = lo último guardado |
+| `errors` | number |  |
+| `warnings` | number |  |
+| `messages` | lista de { severity, line, offset, text, uri } |  |
+
 ### `run_unit_tests` — Ejecutar ABAP Unit
 
 Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada fallo. Solo corre tests RISK LEVEL HARMLESS y DURATION SHORT. Si no hay clases de test lo dice: cero tests no es un éxito.
@@ -416,6 +426,16 @@ Ejecuta un SELECT de ABAP SQL (con WHERE, JOIN, ORDER BY, subconsultas) vía la 
 | `max_rows` | number | 100 |  |
 
 \* obligatorio
+
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `rows` | number | Filas devueltas |
+| `columns` | lista de string |  |
+| `values` | lista de record | Filas como objetos columna→valor (hasta 500; el texto las trae todas) |
+| `truncated` | boolean | true si values no incluye todas las filas |
+| `notes` | lista de string | Avisos de la política de datos (enmascarado, tope de filas) |
 
 ### `table_contents` — Contenido de una tabla
 

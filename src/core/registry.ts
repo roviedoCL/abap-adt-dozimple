@@ -69,6 +69,8 @@ export function eligibleSystems(def: ToolDef<any>, cfg: Config): SystemConfig[] 
 export interface CallOutcome {
   text: string;
   isError: boolean;
+  /** Datos estructurados de la respuesta (solo tools con `output`). */
+  structured?: Record<string, unknown>;
   /** "RESULT": la tool respondió con un resultado negativo (no una excepción). */
   kind?: ErrorKind | "RESULT";
   system?: string;
@@ -235,7 +237,11 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
       const { result: res, notes } = await withNotes(() => runGuarded(def, args, ctx, sapConn, systemId));
       const text = renderNotes(notes) + (typeof res === "string" ? res : res.text);
       const isError = typeof res === "string" ? false : !!res.isError;
-      outcome = { text: head + budget(text), isError, kind: isError ? "RESULT" : undefined, system: systemId };
+      const structured = typeof res === "string" ? undefined : res.structured;
+      // Una tool con esquema de salida que responde bien sin datos estructurados es un bug: mejor verlo aquí que
+      // como error críptico del SDK en el cliente.
+      if (def.output && !isError && !structured) throw new ToolError("INTERNAL", `${def.name} declara salida estructurada y no la devolvió.`);
+      outcome = { text: head + budget(text), isError, kind: isError ? "RESULT" : undefined, system: systemId, structured };
     }
   } catch (e) {
     let te = normalizeError(e, systemId);
@@ -376,11 +382,16 @@ export function registerAll(
         title: def.title,
         description: describe(def, config),
         inputSchema,
+        ...(def.output ? { outputSchema: z.object(def.output) } : {}),
         annotations: annotationsFor(def),
       },
       (async (args: Record<string, unknown>) => {
         const r = await invoke(def, args ?? {}, { config, pool, tools: defs, sidecars, elicit: elicitFor(server) });
-        return { content: [{ type: "text" as const, text: r.text }], isError: r.isError };
+        return {
+          content: [{ type: "text" as const, text: r.text }],
+          isError: r.isError,
+          ...(r.structured ? { structuredContent: r.structured } : {}),
+        };
       }) as any,
     );
     published.push(def.name);
