@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-23
+
+Cuatro tools para diagnóstico y soporte: dumps agrupados por periodo, búsqueda de texto en el código, estado de notas SAP y ampliaciones/BAdI. Todas verificadas en vivo en un NW 7.50.
+
 ### Añadido
 - **`enhancements`: ampliaciones y BAdI.** Tres preguntas en una tool, por SQL de diccionario (7.50 y S/4):
   implementaciones de una BAdI, nuevas y clásicas, activas o no, con las propias (Z/Y) primero; ampliaciones de código
