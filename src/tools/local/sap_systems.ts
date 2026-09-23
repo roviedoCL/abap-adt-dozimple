@@ -31,6 +31,10 @@ export default defineTool({
       out.push(`${s.id}${config.defaultSystem?.toUpperCase() === s.id.toUpperCase() ? " (por defecto)" : ""} — ${s.description ?? s.url} · mandante ${s.client} · ${flags.join(" · ")}`);
       if (!check) continue;
       const sap = pool.get(s);
+      if (sap.circuitOpenFor()) {
+        out.push("  circuito abierto por fallos de red seguidos: se cierra y se reintenta ahora");
+        sap.resetCircuit();
+      }
       try {
         const caps = await sap.capabilities(refresh_discovery);
         const rel = await sap.release();

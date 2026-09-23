@@ -59,6 +59,7 @@ async function execute(c: ADTClient, sap: SapConnection, systemId: string, t: Ta
 
 export default defineTool({
   name: "run_atc",
+  timeoutMs: 180_000,
   title: "Ejecutar ATC",
   description:
     "Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos numerados (prioridad, línea, " +

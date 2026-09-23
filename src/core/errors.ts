@@ -68,6 +68,16 @@ export function normalizeError(e: unknown, systemId?: string): ToolError {
   return new ToolError("INTERNAL", message || "Error sin mensaje");
 }
 
+/**
+ * Sesión caducada a mitad de una lectura: token CSRF rechazado, o 401 en una sesión que ya había entrado. El registro
+ * la renueva y repite la lectura UNA vez; nunca una escritura (el bloqueo se perdió con la sesión).
+ */
+export function isSessionExpired(e: unknown): boolean {
+  if (isCsrfError(e)) return true;
+  const st = e as { status?: number; err?: number } | undefined;
+  return (isHttpError(e) && st?.status === 401) || (isAdtError(e) && st?.err === 401);
+}
+
 export function renderError(te: ToolError): string {
   const labels: Record<ErrorKind, string> = {
     NETWORK: "Sin conexión",

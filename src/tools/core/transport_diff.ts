@@ -30,6 +30,7 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
 
 export default defineTool({
   name: "transport_diff",
+  timeoutMs: 180_000,
   title: "Qué cambió una orden (diff de código)",
   description:
     "Revisión de código de una orden: por cada objeto con fuente (programas, includes, clases, interfaces, FM, CDS) " +

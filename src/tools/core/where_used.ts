@@ -5,6 +5,7 @@ import { defineTool } from "../../core/tool.js";
 
 export default defineTool({
   name: "where_used",
+  timeoutMs: 120_000,
   title: "Dónde se usa",
   description:
     "Lista de uso (where-used) de un objeto: quién lo referencia, con paquete y responsable. Con snippets=true añade " +

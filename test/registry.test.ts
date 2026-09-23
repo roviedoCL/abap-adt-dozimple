@@ -30,6 +30,8 @@ function fakePool(conn: Partial<Record<string, any>> = {}) {
       system: s,
       missingCapabilities: async () => [],
       adt: async () => ({}),
+      noteNetworkFailure() {},
+      resetReader() {},
       ...conn,
     }),
   } as any;

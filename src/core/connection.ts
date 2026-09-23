@@ -10,6 +10,10 @@ import { normalizeValue, wrapSql } from "./sql.js";
 const CACHE_DIR = join(homedir(), ".cache", "abap-adt-dozimple");
 const DISCOVERY_TTL_MS = 7 * 24 * 3600 * 1000;
 const REQUEST_TIMEOUT_MS = 120_000;
+/** Circuit breaker: N fallos de red en la ventana abren el circuito durante CIRCUIT_OPEN_MS. */
+const CIRCUIT_FAILURES = 3;
+const CIRCUIT_WINDOW_MS = 60_000;
+const CIRCUIT_OPEN_MS = 60_000;
 
 /**
  * TLS: con caFile se verifica contra ese certificado (lo correcto para un
@@ -39,8 +43,52 @@ export class SapConnection {
   private reader?: Promise<ADTClient>;
   private caps?: Promise<Capabilities>;
   private basisRelease?: Promise<string | undefined>;
+  private networkFailures: number[] = [];
+  private openUntil = 0;
 
   constructor(readonly system: SystemConfig) {}
+
+  /** Olvida el cliente de lectura (sesión caducada): la siguiente llamada vuelve a entrar. */
+  resetReader(): void {
+    const old = this.reader;
+    this.reader = undefined;
+    old?.then((c) => c.logout()).catch(() => undefined);
+  }
+
+  /**
+   * Tres fallos de red en un minuto abren el circuito: durante un minuto ninguna tool intenta nada contra este
+   * sistema y responde al instante. Un sistema caído (VPN, host) dejaba de responder 120 s por cada llamada.
+   */
+  noteNetworkFailure(now = Date.now()): void {
+    this.networkFailures = this.networkFailures.filter((t) => now - t < CIRCUIT_WINDOW_MS);
+    this.networkFailures.push(now);
+    if (this.networkFailures.length >= CIRCUIT_FAILURES) {
+      this.openUntil = now + CIRCUIT_OPEN_MS;
+      this.networkFailures = [];
+    }
+  }
+
+  /** Segundos que faltan para volver a intentar, o 0 si el circuito está cerrado. */
+  circuitOpenFor(now = Date.now()): number {
+    return this.openUntil > now ? Math.ceil((this.openUntil - now) / 1000) : 0;
+  }
+
+  /** Cierra el circuito a mano (sap_systems con check): se vuelve a intentar ya. */
+  resetCircuit(): void {
+    this.openUntil = 0;
+    this.networkFailures = [];
+  }
+
+  private assertCircuitClosed(): void {
+    const s = this.circuitOpenFor();
+    if (s) {
+      throw new ToolError(
+        "NETWORK",
+        `${this.system.id} no respondió ${CIRCUIT_FAILURES} veces seguidas: no se vuelve a intentar durante ${s} s.`,
+        "sap_systems(check=true) lo reintenta ahora mismo.",
+      );
+    }
+  }
 
   private async newClient(): Promise<ADTClient> {
     const s = this.system;
@@ -62,6 +110,7 @@ export class SapConnection {
 
   /** Cliente de lectura, reutilizado entre llamadas. */
   async adt(): Promise<ADTClient> {
+    this.assertCircuitClosed();
     if (!this.reader) {
       this.reader = this.newClient().then((c) => this.login(c));
       this.reader.catch(() => (this.reader = undefined));
@@ -71,6 +120,7 @@ export class SapConnection {
 
   /** Ejecuta fn con una sesión stateful propia y la cierra siempre. */
   async stateful<T>(fn: (c: ADTClient) => Promise<T>): Promise<T> {
+    this.assertCircuitClosed();
     const c = await this.login(await this.newClient());
     c.stateful = session_types.stateful;
     try {
