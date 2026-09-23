@@ -5,7 +5,6 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
-### Añadido
 - **`revert_source`: volver a una versión anterior con confirmación.** Tras un `write_source` cuya activación falló,
   el objeto queda con un borrador inactivo encima de la versión activa; la tool vuelve a escribir la versión elegida
   (`active`: la última activa; `previous`: la anterior a la activa; `N`: una del historial de `object_versions`)

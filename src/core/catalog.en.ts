@@ -49,6 +49,7 @@ export const TOOLS_EN: Record<string, string> = {
   abap_lint: "**abaplint on a snippet.** Runs abaplint locally (code never leaves the machine) on an ABAP snippet or source.",
   docs_community_search: "**Search SAP Community.** Searches SAP Community (blogs and questions) by error message, class or concept.",
   write_source: "**Save source to SAP.** Replaces the FULL source of an existing object (or class include) in the given transport, after a preview with syntax check and diff and a human confirmation.",
+  revert_source: "**Revert to an earlier version.** Writes back an earlier version of an object (the last active one, the one before it, or a numbered one from object_versions) through the same preview, fingerprint, lock and transport as write_source; never reverts on its own.",
   activate: "**Activate object.** Activates an object and returns SAP's messages as they are (errors with line, warnings, objects left inactive).",
   write_text_elements: "**Create or change text symbols.** Adds or changes text symbols (or selection texts) of a program/class/group, merging with the existing ones: nothing not mentioned is deleted.",
   create_transport: "**Create transport request.** Creates a workbench request for an object's package BEFORE the first edit, so the change lands in the ticket's transport and not in a reused task.",

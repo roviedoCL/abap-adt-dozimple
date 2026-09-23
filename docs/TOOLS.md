@@ -11,7 +11,7 @@ Producto de [DoZimple](https://dozimple.cl).
 - [Consulta de datos](#datos) — 2 tools: `sql_query`, `table_contents`
 - [Diagnóstico de incidentes](#diagnostico) — 4 tools: `dumps`, `jobs`, `application_log`, `gateway_errors`
 - [Documentación SAP](#documentacion) — 7 tools: `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint`, `docs_community_search`
-- [Escritura controlada](#escritura) — 4 tools: `write_source`, `activate`, `write_text_elements`, `create_transport`
+- [Escritura controlada](#escritura) — 5 tools: `write_source`, `revert_source`, `activate`, `write_text_elements`, `create_transport`
 - [DoZimple Transport Risk](#transport-risk) — 7 tools: `analyze_transport_risk`, `import_health`, `failure_ranking`, `change_audit`, `object_transport_history`, `remote_source`, `transport_source_check`
 - [Operación y crecimiento](#operacion) — 4 tools: `sap_systems`, `report_gap`, `close_gap`, `usage_stats`
 - [Flujos guiados](#flujos-guiados)
@@ -680,6 +680,28 @@ Sustituye la fuente COMPLETA de un objeto existente (o de un include de clase), 
 | `transport` | string |  | Orden (o tarea) donde debe ir el cambio. Obligatoria salvo objetos locales |
 | `activate` | boolean | true |  |
 | `skip_syntax_check` | boolean | false |  |
+| `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
+
+\* obligatorio
+
+### `revert_source` — Volver a una versión anterior
+
+Deshace un cambio escribiendo de nuevo una versión anterior del objeto: la última activa (para limpiar un borrador inactivo tras un write_source cuya activación falló), la anterior a la activa, o una concreta del historial de object_versions. Pasa por la misma vista previa, confirmación, bloqueo y orden que write_source: nunca revierte por su cuenta. Solo objetos de código fuente.
+
+| | |
+|---|---|
+| **Acceso** | Escribe (solo DEV con `allowWrite`; nunca QAS/PRD) |
+| **Créditos** | [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) — Marcello Urbani (MIT, dependencia) |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
+| `object_name` * | string |  |  |
+| `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
+| `include` | `main` \| `definitions` \| `implementations` \| `macros` \| `testclasses` | "main" |  |
+| `target` | union | "active" | «active»: la última versión activa (deshace un borrador inactivo, p. ej. un write_source cuya activación falló). «previous»: la versión anterior a la activa (deshace la última activación). Un número N: la versión N tal como la lista object_versions. |
+| `transport` | string |  | Orden (o tarea) donde debe ir la reversión. Obligatoria salvo objetos locales |
+| `activate` | boolean | true |  |
 | `confirm_token` | string |  | Token de la vista previa. Sin él la tool no escribe: devuelve qué va a cambiar y el token, que se usa tras la conformidad del usuario (un solo uso, 10 min). |
 
 \* obligatorio

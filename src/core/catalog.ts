@@ -128,6 +128,7 @@ export const GROUPS: Group[] = [
     pitch: "Guardar cambios solo en desarrollo, en la orden correcta y con la sintaxis verificada antes.",
     tools: [
       { name: "write_source", credits: ADT },
+      { name: "revert_source", credits: ADT },
       { name: "activate", credits: ADT },
       { name: "write_text_elements", credits: ADT },
       { name: "create_transport", credits: ADT },
