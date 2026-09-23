@@ -4,6 +4,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 
 ## [Unreleased]
 
+### Añadido
+- **Resiliencia de conexión** (sprint 1 del plan de mejoras):
+  - **Sesión caducada renovada en las lecturas.** Si una tool de lectura recibe un token CSRF rechazado o un 401 en
+    una sesión que ya había entrado, el servidor descarta el cliente, vuelve a entrar y repite la lectura una vez;
+    la respuesta lo anota. Nunca en escrituras ni ejecuciones: el bloqueo se perdió con la sesión y un reintento
+    podría escribir dos veces. Una contraseña rechazada sigue fallando a la primera y sigue olvidándose.
+  - **Circuit breaker por sistema.** Tres fallos de red en un minuto abren el circuito de ESE sistema durante un
+    minuto: toda tool responde al instante «no se vuelve a intentar durante N s» en vez de esperar 120 s por llamada.
+    Los demás sistemas no se ven afectados; `sap_systems(check=true)` lo cierra y reintenta. Solo cuentan los fallos
+    de red reales de la librería, no los tiempos agotados propios.
+  - **Tiempo máximo por tool** (`timeoutMs`, por defecto 60 s; ATC y diff de orden 180 s, where-used y ABAP Unit
+    120 s). Al vencer, error `NETWORK` con el tiempo y la sugerencia de acotar; no se reintenta.
+
 ### Cambiado
 - Insignia de **OpenSSF Best Practices (Passing)** en el README: el proyecto cumple los 67 criterios del nivel
   Passing, incluidas las sugerencias, con la ficha pública en https://www.bestpractices.dev/projects/14759.

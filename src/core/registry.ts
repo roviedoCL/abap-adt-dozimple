@@ -5,11 +5,11 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { canWrite, resolveSystem, type Config, type SystemConfig, type SystemSource } from "./config.js";
 import type { ConnectionPool, SapConnection } from "./connection.js";
-import { normalizeError, renderError, ToolError, type ErrorKind } from "./errors.js";
+import { isSessionExpired, normalizeError, renderError, ToolError, type ErrorKind } from "./errors.js";
 import { budget } from "./output.js";
 import { appendAudit, auditArgs, type AuditInput } from "./audit.js";
 import { consumeTokenWithState, issueToken } from "./confirm.js";
-import { renderNotes, withNotes } from "./notes.js";
+import { addNote, renderNotes, withNotes } from "./notes.js";
 import { assertAccess } from "./policy.js";
 import { recordUsage } from "./telemetry.js";
 import type { SidecarPool } from "./sidecar.js";
@@ -232,13 +232,16 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
           throw new ToolError("INTERNAL", `No se ejecutó: no se pudo escribir el registro de auditoría (${(e as Error).message}).`);
         }
       }
-      const { result: res, notes } = await withNotes(() => def.run(args, ctx));
+      const { result: res, notes } = await withNotes(() => runGuarded(def, args, ctx, sapConn, systemId));
       const text = renderNotes(notes) + (typeof res === "string" ? res : res.text);
       const isError = typeof res === "string" ? false : !!res.isError;
       outcome = { text: head + budget(text), isError, kind: isError ? "RESULT" : undefined, system: systemId };
     }
   } catch (e) {
     let te = normalizeError(e, systemId);
+    // Solo los fallos de red REALES (de la librería) cuentan para el circuito: ni un timeout nuestro ni el propio
+    // aviso de circuito abierto.
+    if (te.kind === "NETWORK" && !(e instanceof ToolError) && sapConn) sapConn.noteNetworkFailure();
     // Un 404 de SAP (no un «objeto no existe» nuestro) sobre un endpoint que el
     // discovery tampoco lista: ahora sí hay evidencia de que falta la función.
     if (te.kind === "NOT_FOUND" && !(e instanceof ToolError) && missing.length && sapConn) {
@@ -262,6 +265,39 @@ export async function invoke(def: ToolDef<any>, rawArgs: Record<string, unknown>
     kind: outcome.kind,
   });
   return outcome;
+}
+
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new ToolError("NETWORK", `${what}: tiempo agotado (${ms >= 1000 ? `${Math.round(ms / 1000)} s` : `${ms} ms`}).`, "Acota la petición (menos objetos, más filtro) o repite más tarde.")),
+      ms,
+    );
+  });
+  return Promise.race([p, limit]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
+/**
+ * Ejecuta la tool con su tiempo máximo y, si la sesión de lectura había caducado (CSRF o 401 tras haber entrado),
+ * la renueva y repite UNA vez. Nunca repite escrituras ni ejecuciones: el bloqueo se perdió con la sesión y un
+ * reintento podría escribir dos veces.
+ */
+async function runGuarded(def: ToolDef, args: Record<string, unknown>, ctx: ToolContext, sapConn: SapConnection | undefined, systemId?: string) {
+  const ms = def.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const attempt = () => withTimeout(def.run(args, ctx), ms, def.name);
+  try {
+    return await attempt();
+  } catch (e) {
+    if (def.access === "read" && sapConn && isSessionExpired(e)) {
+      sapConn.resetReader();
+      addNote(`La sesión con ${systemId ?? "SAP"} había caducado: se renovó y la lectura se repitió.`);
+      return await attempt();
+    }
+    throw e;
+  }
 }
 
 /** Elicitación de formulario, si el cliente la anuncia (ABAP_DZ_CONFIRM=token la desactiva). */

@@ -68,6 +68,8 @@ export interface ToolDef<S extends ZodRawShape = ZodRawShape> {
    * se puede desactivar); las exec tienen que declararlo expresamente: un test falla si una exec no lo decide.
    */
   confirm?: boolean;
+  /** Tiempo máximo de una ejecución (por defecto 60 s). Las lentas (ATC, where-used, diff) declaran el suyo. */
+  timeoutMs?: number;
   run(args: z.objectOutputType<S, z.ZodTypeAny>, ctx: ToolContext): Promise<ToolResult>;
   /**
    * Solo tools write: qué va a cambiar, sin cambiar nada (diff, sintaxis,

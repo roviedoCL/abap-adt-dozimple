@@ -11,6 +11,7 @@ export const SAFE_TEST_FLAGS = { harmless: true, dangerous: false, critical: fal
 
 export default defineTool({
   name: "run_unit_tests",
+  timeoutMs: 120_000,
   title: "Ejecutar ABAP Unit",
   description:
     "Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada " +
