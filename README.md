@@ -57,7 +57,7 @@ and **a failure is never presented as an empty result or as success**.
 | Group | What for | Tools |
 |---|---|---|
 | [Code review and transports](#g-revision) | Know what a transport really changes and what it may break, before releasing it. | 5 |
-| [Quality, ATC and remediation](#g-calidad) | Find, understand and fix findings with SAP's real syntax check and quick fixes. | 5 |
+| [Quality, ATC and remediation](#g-calidad) | Find, understand and fix findings with SAP's real syntax check and quick fixes. | 6 |
 | [Repository exploration](#g-exploracion) | Read and understand any ABAP object and its relations, on ECC and S/4HANA. | 10 |
 | [Data queries](#g-datos) | Query tables with ABAP SQL, read-only, with sensitive and personal data protected. | 2 |
 | [Incident diagnosis](#g-diagnostico) | One conversation for what used to take ST22, SM37, SLG1 and /IWFND/ERROR_LOG. | 4 |
@@ -123,6 +123,7 @@ Summary per group; each tool's details — parameters, types, defaults, requirem
 | [`run_atc`](docs/TOOLS.md#calidad) | **Run ATC.** Runs the ABAP Test Cockpit on an object or a transport and lists numbered findings (priority, line, check, message) with SAP's P1/P2/P3 totals. | read |
 | [`atc_quickfix`](docs/TOOLS.md#calidad) | **SAP-proposed fixes.** The fixes SAP offers (the same as Ctrl+1 in Eclipse) for an ATC finding or a line: create text symbol, extract constant, etc. | read |
 | [`api_release_state`](docs/TOOLS.md#calidad) | **Is this API released? What is its successor?** Release state of an SAP object (class, function module/BAPI, table, CDS…) by contract C0–C4 and its released successor, read from the system itself. | read |
+| [`sap_notes`](docs/TOOLS.md#calidad) | **SAP notes in the system (SNOTE).** Whether a note is downloaded in this system, its implementation and processing status, version, component and title, per note or filtered by status/component; no SAP portal or S-user needed. | read |
 | [`syntax_check`](docs/TOOLS.md#calidad) | **SAP syntax check.** SAP's real syntax check (not abaplint), also on code not saved yet. | read |
 | [`run_unit_tests`](docs/TOOLS.md#calidad) | **Run ABAP Unit.** Runs the ABAP Unit tests of a class or program (harmless and short only) and returns the result per method, with each failure in detail. | executes (DEV) |
 
@@ -346,7 +347,7 @@ abap-adt-doZimple is built on other people's work, and says so: each tool lists 
 <!-- credits:start -->
 | Project | Author / holder | License | Type | Used in |
 |---|---|---|---|---|
-| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependency | all (core), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` and 24 more |
+| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependency | all (core), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` and 25 more |
 | [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependency | all (core) |
 | [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependency | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` and 1 more |
 | [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam and contributors | MIT | dependency | `abap_lint` |

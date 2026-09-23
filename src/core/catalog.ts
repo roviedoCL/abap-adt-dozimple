@@ -68,6 +68,7 @@ export const GROUPS: Group[] = [
       { name: "run_atc", credits: ADT },
       { name: "atc_quickfix", credits: ["abapAdtApi", "arc1", "myers"] },
       { name: "api_release_state", credits: ["abapAdtApi", "vsp"] },
+      { name: "sap_notes", credits: ADT },
       { name: "syntax_check", credits: ["abapAdtApi", "abapFs"] },
       { name: "run_unit_tests", credits: ADT },
     ],

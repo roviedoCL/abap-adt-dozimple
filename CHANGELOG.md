@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 ## [Unreleased]
 
 ### Añadido
+- **`sap_notes`: estado de notas SAP en el sistema, como en SNOTE**, sin portal ni S-user: si la nota está descargada,
+  estado de implementación y de tratamiento, versión, componente y título (español si existe). Por notas concretas
+  («¿está la 2198647 en PRD?») o filtrando por estado y/o prefijo de componente, con el total real. Distingue «no
+  descargada» de «no implementada». Los códigos de estado no son valores fijos del diccionario: su significado sale de
+  las constantes de SAP (`IF_SCWN_NA_CONSTANTS`), verificadas en un 7.50. En sistemas con datos productivos no se
+  muestra quién trató la nota. Sustituto seguro del MCP de notas de SAP, que usa APIs privadas y el S-user.
 - **`source_search`: buscar texto en el código de un paquete, una orden o una lista de objetos.** Texto literal o
   expresión regular (máx. 200 caracteres), sin distinguir mayúsculas; devuelve objeto, include, línea y la línea
   encontrada, con salida estructurada. Lee cada fuente (programas, clases con sus includes locales, interfaces,
