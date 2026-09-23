@@ -56,7 +56,7 @@ El agente elige las tools, las encadena y responde con evidencia. Cada respuesta
 | Grupo | Para qué | Tools |
 |---|---|---|
 | [Revisión de código y pases](#g-revision) | Saber qué cambia de verdad una orden y qué puede romper, antes de liberarla. | 5 |
-| [Calidad, ATC y remediación](#g-calidad) | Encontrar, entender y corregir hallazgos con la sintaxis y las correcciones reales de SAP. | 5 |
+| [Calidad, ATC y remediación](#g-calidad) | Encontrar, entender y corregir hallazgos con la sintaxis y las correcciones reales de SAP. | 6 |
 | [Exploración del repositorio](#g-exploracion) | Leer y entender cualquier objeto ABAP y sus relaciones, en ECC y en S/4HANA. | 10 |
 | [Consulta de datos](#g-datos) | Preguntar a las tablas con ABAP SQL, de solo lectura y sin tocar material de credenciales. | 2 |
 | [Diagnóstico de incidentes](#g-diagnostico) | Reunir en una conversación lo que antes exigía ST22, SM37, SLG1 y /IWFND/ERROR_LOG. | 4 |
@@ -122,6 +122,7 @@ la **[referencia completa](docs/TOOLS.md)**.
 | [`run_atc`](docs/TOOLS.md#calidad) | **Ejecutar ATC.** Ejecuta el ATC sobre un objeto o una orden de transporte y lista los hallazgos numerados (prioridad, línea, check, mensaje), con los totales P1/P2/P3 que da SAP. | lectura |
 | [`atc_quickfix`](docs/TOOLS.md#calidad) | **Correcciones propuestas por SAP.** Correcciones que SAP ofrece (las mismas de Ctrl+1 en Eclipse) para un hallazgo ATC o una línea: crear símbolo de texto, extraer constante, etc. | lectura |
 | [`api_release_state`](docs/TOOLS.md#calidad) | **¿Está liberada esta API? ¿Cuál es su sucesor?** Estado de liberación de un objeto SAP (clase, FM/BAPI, tabla, CDS…) por contrato C0–C4 y su sucesor liberado, leído del propio sistema. | lectura |
+| [`sap_notes`](docs/TOOLS.md#calidad) | **Notas SAP en el sistema (SNOTE).** Estado de notas SAP en este sistema, como en SNOTE: si está descargada, estado de implementación (completa, incompleta, versión anterior, se puede implementar, obsoleta, no se puede implementar), estado de tratamiento, versión, componente y título. | lectura |
 | [`syntax_check`](docs/TOOLS.md#calidad) | **Chequeo de sintaxis SAP.** Chequeo de sintaxis real de SAP (no abaplint). | lectura |
 | [`run_unit_tests`](docs/TOOLS.md#calidad) | **Ejecutar ABAP Unit.** Ejecuta los tests ABAP Unit de una clase o programa y devuelve el resultado por método, con el detalle de cada fallo. | ejecuta (DEV) |
 
@@ -345,7 +346,7 @@ abap-adt-doZimple se construye sobre el trabajo de otros, y lo reconoce: cada to
 <!-- credits:start -->
 | Proyecto | Autor / titular | Licencia | Tipo | Usado en |
 |---|---|---|---|---|
-| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependencia | todas (núcleo), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` y 24 más |
+| [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) | Marcello Urbani | MIT | dependencia | todas (núcleo), `transport_diff`, `transport_contents`, `inactive_objects`, `edit_preflight`, `run_atc` y 25 más |
 | [Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Model Context Protocol | MIT | dependencia | todas (núcleo) |
 | [mcp-sap-docs](https://github.com/marianfoo/mcp-sap-docs) | Marian Zeis (marianfoo) | Apache-2.0 | dependencia | `abap_feature_matrix`, `docs_search`, `docs_fetch`, `clean_core_objects`, `clean_core_object`, `abap_lint` y 1 más |
 | [abaplint](https://github.com/abaplint/abaplint) | Lars Hvam y contribuidores | MIT | dependencia | `abap_lint` |

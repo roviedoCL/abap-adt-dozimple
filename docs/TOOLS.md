@@ -1,12 +1,12 @@
 # Referencia de tools — abap-adt-doZimple
 
-Generado desde el código con `npm run docs`. 49 tools en 9 grupos y 3 flujos guiados.
+Generado desde el código con `npm run docs`. 50 tools en 9 grupos y 3 flujos guiados.
 Producto de [DoZimple](https://dozimple.cl).
 
 ## Índice
 
 - [Revisión de código y pases](#revision) — 5 tools: `transport_diff`, `transport_contents`, `co_change`, `inactive_objects`, `edit_preflight`
-- [Calidad, ATC y remediación](#calidad) — 5 tools: `run_atc`, `atc_quickfix`, `api_release_state`, `syntax_check`, `run_unit_tests`
+- [Calidad, ATC y remediación](#calidad) — 6 tools: `run_atc`, `atc_quickfix`, `api_release_state`, `sap_notes`, `syntax_check`, `run_unit_tests`
 - [Exploración del repositorio](#exploracion) — 10 tools: `search_objects`, `get_source`, `where_used`, `source_search`, `object_versions`, `package_contents`, `ddic_type_info`, `transaction_info`, `function_modules`, `text_elements`
 - [Consulta de datos](#datos) — 2 tools: `sql_query`, `table_contents`
 - [Diagnóstico de incidentes](#diagnostico) — 4 tools: `dumps`, `jobs`, `application_log`, `gateway_errors`
@@ -184,6 +184,33 @@ Estado de liberación de un objeto SAP (clase, FM/BAPI, tabla, CDS…) por contr
 | `object_type` | string |  | Tipo corto: PROG, INCL, CLAS, INTF, FUGR, FUNC, DDLS, DDLX, DCLS, TABL, STRU, VIEW, DTEL, DOMA, TTYP, MSAG, XSLT, BDEF, SRVD, SRVB, ENHO. También vale el tipo ADT (p. ej. PROG/P). |
 
 \* obligatorio
+
+### `sap_notes` — Notas SAP en el sistema (SNOTE)
+
+Estado de notas SAP en este sistema, como en SNOTE: si está descargada, estado de implementación (completa, incompleta, versión anterior, se puede implementar, obsoleta, no se puede implementar), estado de tratamiento, versión, componente y título. Con notes=[…] responde por notas concretas (p. ej. «¿está la 2198647 en PRD?»); sin notas, lista las del estado pedido. Solo conoce las notas descargadas en el sistema: no consulta el portal.
+
+| | |
+|---|---|
+| **Acceso** | Solo lectura |
+| **Créditos** | [abap-adt-api](https://github.com/marcellourbani/abap-adt-api) — Marcello Urbani (MIT, dependencia) |
+
+| Parámetro | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `system` | string |  | Sistema SAP configurado. Obligatorio si hay varios y ninguno por defecto. |
+| `notes` | lista de string |  |  |
+| `implementation` | lista de `E` \| `U` \| `V` \| `N` \| `O` \| `-` |  | Sin notes: filtrar por estado de implementación (E completa, U incompleta, V versión anterior, N se puede implementar, O obsoleta, - no se puede) |
+| `component` | string |  | Sin notes: prefijo de componente, p. ej. SD-BF o MM-PUR |
+| `max` | number | 100 |  |
+
+\* obligatorio
+
+Salida estructurada (`structuredContent`, además del texto):
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `notes` | lista de { note, downloaded, implementation, implementation_code, processing, version, component, title, processor } |  |
+| `total` | number |  |
+| `truncated` | boolean |  |
 
 ### `syntax_check` — Chequeo de sintaxis SAP
 

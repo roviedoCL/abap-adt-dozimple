@@ -24,6 +24,7 @@ export const TOOLS_EN: Record<string, string> = {
   run_atc: "**Run ATC.** Runs the ABAP Test Cockpit on an object or a transport and lists numbered findings (priority, line, check, message) with SAP's P1/P2/P3 totals.",
   atc_quickfix: "**SAP-proposed fixes.** The fixes SAP offers (the same as Ctrl+1 in Eclipse) for an ATC finding or a line: create text symbol, extract constant, etc.",
   api_release_state: "**Is this API released? What is its successor?** Release state of an SAP object (class, function module/BAPI, table, CDS…) by contract C0–C4 and its released successor, read from the system itself.",
+  sap_notes: "**SAP notes in the system (SNOTE).** Whether a note is downloaded in this system, its implementation and processing status, version, component and title, per note or filtered by status/component; no SAP portal or S-user needed.",
   syntax_check: "**SAP syntax check.** SAP's real syntax check (not abaplint), also on code not saved yet.",
   run_unit_tests: "**Run ABAP Unit.** Runs the ABAP Unit tests of a class or program (harmless and short only) and returns the result per method, with each failure in detail.",
   search_objects: "**Search ABAP objects.** Searches repository objects by name (supports * wildcards).",
